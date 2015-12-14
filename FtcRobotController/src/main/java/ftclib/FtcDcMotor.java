@@ -27,6 +27,7 @@ public class FtcDcMotor extends TrcMotorController
     private DcMotor motor;
     private int zeroEncoderValue;
     private int positionSensorSign = 1;
+    private boolean brakeMode = true;
 
     /**
      * Constructor: Create an instance of the object.
@@ -131,13 +132,42 @@ public class FtcDcMotor extends TrcMotorController
             power = 0.0;
         }
 
-        motor.setPower(power);
-    }   //set
+        if (power != 0.0 || brakeMode)
+        {
+            motor.setPower(power);
+        }
+        else
+        {
+            motor.setPowerFloat();
+        }
+    }   //setPower
+
+    /**
+     * This method enables/disables motor brake mode. In motor brake mode, setPower(0) would
+     * stop the motor very abruptly by shorting the motor wires together using the generated
+     * back EMF to s5op the motor. When brakMode is false (i.e. float mode), the motor wires
+     * are just disconnected from the motor controller so the motor will stop gradually.
+     *
+     * @param brakeMode specifies true to enable brake mode, false otherwise.
+     */
+    public void setBrakeMode(boolean brakeMode)
+    {
+        final String funcName = "setBrakeMode";
+
+        if (debugEnabled)
+        {
+            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
+                                "brakeMode=%s", Boolean.toString(brakeMode));
+            dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
+        }
+
+        this.brakeMode = brakeMode;
+    }   //setBrakeMode
 
     /**
      * This method inverts the motor direction.
      *
-     * @param inverted specifies true if inverting motor direction, false otherwise.
+     * @param inverted specifies true to invert motor direction, false otherwise.
      */
     @Override
     public void setInverted(boolean inverted)
@@ -155,8 +185,7 @@ public class FtcDcMotor extends TrcMotorController
     }   //setInverted
 
     /**
-     * This method resets the motor position reading. The motor position
-     * reading is provided by an encoder.
+     * This method resets the motor position sensor, typically an encoder.
      */
     @Override
     public void resetPosition()
@@ -188,7 +217,7 @@ public class FtcDcMotor extends TrcMotorController
      * cause the encoder reading to go down when the motor is receiving positive
      * power. This method can correct this situation.
      *
-     * @param inverted specifies true if inverting position sensor direction,
+     * @param inverted specifies true to invert position sensor direction,
      *                 false otherwise.
      */
     @Override
@@ -207,7 +236,7 @@ public class FtcDcMotor extends TrcMotorController
     }   //setPositionSensorInverted
 
     /**
-     * This method returns the current motor position reading.
+     * This method returns the motor position by reading the position sensor.
      *
      * @return current motor position.
      */
@@ -248,9 +277,9 @@ public class FtcDcMotor extends TrcMotorController
     }   //getSpeed
 
     /**
-     * This method returns the reverse limit switch state.
+     * This method returns the state of the reverse limit switch.
      *
-     * @return true if reverse limit switch is activated, falsse otherwise.
+     * @return true if reverse limit switch is activated, false otherwise.
      */
     @Override
     public boolean isReverseLimitSwitchActive()

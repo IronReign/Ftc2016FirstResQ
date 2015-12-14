@@ -36,7 +36,9 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
     private TrcEvent event;
     private TrcTimer timer;
     private TrcStateMachine sm;
-
+    //
+    // Menu choices.
+    //
     private Test test = Test.SENSOR_TESTS;
     private double driveTime = 0.0;
     private double driveDistance = 0.0;
@@ -68,8 +70,9 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
     @Override
     public void runPeriodic()
     {
-        super.runPeriodic();
-
+        State state = (State)sm.getState();
+        dashboard.displayPrintf(
+                8, "%s: %s", test.toString(), state != null? state.toString(): "STOPPED!");
         switch (test)
         {
             case SENSOR_TESTS:
@@ -177,28 +180,33 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
     private void doSensorTests()
     {
         //
+        // Allow TeleOp to run so we can control the robot in test sensor mode.
+        //
+        super.runPeriodic();
+        //
         // Read all sensors and display on the dashboard.
         // Drive the robot around to sample different locations of the field.
         //
-        dashboard.displayPrintf(8, "Sensor Tests:");
-        dashboard.displayPrintf(9, "lfEnc=%.0f,rfEnc=%.0f,lrEnc=%.0f,rrEnc=%.0f",
+        dashboard.displayPrintf(9, "Sensor Tests:");
+        dashboard.displayPrintf(10, "Enc: lf=%.0f,rf=%.0f",
                                 robot.leftFrontWheel.getPosition(),
-                                robot.rightFrontWheel.getPosition(),
+                                robot.rightFrontWheel.getPosition());
+        dashboard.displayPrintf(11, "Enc: lr=%.0f,rr=%.0f",
                                 robot.leftRearWheel.getPosition(),
                                 robot.rightRearWheel.getPosition());
-        dashboard.displayPrintf(10, "Gyro: Rate=%.1f,Heading=%.1f",
+        dashboard.displayPrintf(12, "Gyro: Rate=%.1f,Heading=%.1f",
                                 robot.gyro.getZRotationRate().value,
                                 robot.gyro.getZHeading().value);
-        dashboard.displayPrintf(11, "Color: R=%d,G=%d,B=%d,Alpha=%d,Hue=%x",
+        dashboard.displayPrintf(13, "RGBAH: %d,%d,%d,%d,%x",
                                 robot.colorSensor.red(),
                                 robot.colorSensor.green(),
                                 robot.colorSensor.blue(),
                                 robot.colorSensor.alpha(),
                                 robot.colorSensor.argb());
-        dashboard.displayPrintf(12, "Light=%.0f,Sonar=%.1f",
+        dashboard.displayPrintf(14, "Light=%.0f,Sonar=%.1f",
                                 robot.lightSensor.getData().value,
                                 robot.sonarSensor.getData().value);
-        dashboard.displayPrintf(13, "ElevatorLimit=%d,%d SliderLimit=%d,%d",
+        dashboard.displayPrintf(15, "ElevatorLimit=%d,%d SliderLimit=%d,%d",
                                 robot.elevator.isLowerLimitSwitchPressed()? 1: 0,
                                 robot.elevator.isUpperLimitSwitchPressed()? 1: 0,
                                 robot.slider.isLowerLimitSwitchPressed()? 1: 0,
@@ -211,11 +219,11 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
         double rfEnc = robot.rightFrontWheel.getPosition();
         double lrEnc = robot.leftRearWheel.getPosition();
         double rrEnc = robot.rightRearWheel.getPosition();
-        dashboard.displayPrintf(8, "Timed Drive: %.0f sec", time);
-        dashboard.displayPrintf(9, "lfEnc=%.0f,rfEnc=%.0f", lfEnc, rfEnc);
-        dashboard.displayPrintf(10, "lrEnc=%.0f,rrEnc=%.0f", lrEnc, rrEnc);
-        dashboard.displayPrintf(11, "average=%f", (lfEnc + rfEnc + lrEnc + rrEnc)/4.0);
-        dashboard.displayPrintf(12, "xPos=%.1f,yPos=%.1f,heading=%.1f",
+        dashboard.displayPrintf(9, "Timed Drive: %.0f sec", time);
+        dashboard.displayPrintf(10, "Enc:lf=%.0f,rf=%.0f", lfEnc, rfEnc);
+        dashboard.displayPrintf(11, "Enc:lr=%.0f,rr=%.0f", lrEnc, rrEnc);
+        dashboard.displayPrintf(12, "average=%f", (lfEnc + rfEnc + lrEnc + rrEnc)/4.0);
+        dashboard.displayPrintf(13, "xPos=%.1f,yPos=%.1f,heading=%.1f",
                                 robot.driveBase.getXPosition(),
                                 robot.driveBase.getYPosition(),
                                 robot.driveBase.getHeading());
@@ -249,13 +257,13 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
 
     private void doDistanceDrive(double distance)
     {
-        dashboard.displayPrintf(8, "Distance Drive: %.1f ft", distance/12.0);
-        dashboard.displayPrintf(9, "xPos=%.1f,yPos=%.1f,heading=%.1f",
+        dashboard.displayPrintf(9, "Distance Drive: %.1f ft", distance/12.0);
+        dashboard.displayPrintf(10, "xPos=%.1f,yPos=%.1f,heading=%.1f",
                                 robot.driveBase.getXPosition(),
                                 robot.driveBase.getYPosition(),
                                 robot.driveBase.getHeading());
-        robot.pidCtrlDrive.displayPidInfo(10);
-        robot.pidCtrlTurn.displayPidInfo(12);
+        robot.pidCtrlDrive.displayPidInfo(11);
+        robot.pidCtrlTurn.displayPidInfo(13);
 
         if (sm.isReady())
         {
@@ -266,7 +274,7 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
                     //
                     // Drive the given distance.
                     //
-                    robot.pidDrive.setTarget(distance, 0.0, false, event, 0.0);
+                    robot.pidDrive.setTarget(distance, 0.0, false, event);
                     sm.addEvent(event);
                     sm.waitForEvents(State.DONE);
                     break;
@@ -284,13 +292,13 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
 
     private void doDegreesTurn(double degrees)
     {
-        dashboard.displayPrintf(8, "Degrees Turn: %.1f", degrees);
-        dashboard.displayPrintf(9, "xPos=%.1f,yPos=%.1f,heading=%.1f",
+        dashboard.displayPrintf(9, "Degrees Turn: %.1f", degrees);
+        dashboard.displayPrintf(10, "xPos=%.1f,yPos=%.1f,heading=%.1f",
                                 robot.driveBase.getXPosition(),
                                 robot.driveBase.getYPosition(),
                                 robot.driveBase.getHeading());
-        robot.pidCtrlDrive.displayPidInfo(10);
-        robot.pidCtrlTurn.displayPidInfo(12);
+        robot.pidCtrlDrive.displayPidInfo(11);
+        robot.pidCtrlTurn.displayPidInfo(13);
 
         if (sm.isReady())
         {
@@ -301,7 +309,7 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
                     //
                     // Turn the given degrees.
                     //
-                    robot.pidDrive.setTarget(0.0, degrees, false, event, 0.0);
+                    robot.pidDrive.setTarget(0.0, degrees, false, event);
                     sm.addEvent(event);
                     sm.waitForEvents(State.DONE);
                     break;
@@ -319,19 +327,19 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
 
     private void doLineFollow(Alliance alliance, double wallDistance)
     {
-        dashboard.displayPrintf(8, "Line following: %s, distance=%.1f",
+        dashboard.displayPrintf(9, "Line following: %s, distance=%.1f",
                                 alliance.toString(), wallDistance);
-        dashboard.displayPrintf(9, "Light=%.0f,Sonar=%.1f",
+        dashboard.displayPrintf(10, "Light=%.0f,Sonar=%.1f",
                                 robot.lightSensor.getData().value,
                                 robot.sonarSensor.getData().value);
-        dashboard.displayPrintf(10, "Color: R=%d,G=%d,B=%d,Alpha=%d,Hue=%x",
+        dashboard.displayPrintf(11, "Color: R=%d,G=%d,B=%d,Alpha=%d,Hue=%x",
                                 robot.colorSensor.red(),
                                 robot.colorSensor.green(),
                                 robot.colorSensor.blue(),
                                 robot.colorSensor.alpha(),
                                 robot.colorSensor.argb());
-        robot.pidCtrlSonar.displayPidInfo(11);
-        robot.pidCtrlLight.displayPidInfo(13);
+        robot.pidCtrlSonar.displayPidInfo(12);
+        robot.pidCtrlLight.displayPidInfo(14);
 
         if (sm.isReady())
         {
@@ -340,31 +348,42 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
             {
                 case START:
                     //
-                    // Drive forward until we found the line.
+                    // Drive forward until we reached 24 inches or found the line.
+                    // Enable light trigger so that detecting the line will stop the drive.
+                    // Limit all PID controllers to half power so we go slowly and hopefully
+                    // not passing the line that much.
                     //
                     robot.lightTrigger.setEnabled(true);
                     robot.pidCtrlDrive.setOutputRange(-0.5, 0.5);
                     robot.pidCtrlTurn.setOutputRange(-0.5, 0.5);
                     robot.pidCtrlSonar.setOutputRange(-0.5, 0.5);
                     robot.pidCtrlLight.setOutputRange(-0.5, 0.5);
-                    robot.pidDrive.setTarget(24.0, 0.0, false, event, 0.0);
+                    robot.pidDrive.setTarget(24.0, 0.0, false, event);
                     sm.addEvent(event);
                     sm.waitForEvents(State.TURN_TO_LINE);
                     break;
 
                 case TURN_TO_LINE:
                     //
-                    // Turn slowly to find the line again.
+                    // We have past the line, turn slowly to find the line again.
                     //
                     if (alliance == Alliance.RED_ALLIANCE)
                     {
+                        //
+                        // Turn left to find the line and set to follow the
+                        // right edge of the line.
+                        //
                         robot.pidCtrlLight.setInverted(true);
-                        robot.pidDrive.setTarget(0.0, -90.0, false, event, 0.0);
+                        robot.pidDrive.setTarget(0.0, -90.0, false, event);
                     }
                     else
                     {
+                        //
+                        // Turn right to find the line and set to follow the
+                        // left edge of the line.
+                        //
                         robot.pidCtrlLight.setInverted(false);
-                        robot.pidDrive.setTarget(0.0, 90.0, false, event, 0.0);
+                        robot.pidDrive.setTarget(0.0, 90.0, false, event);
                     }
                     sm.addEvent(event);
                     sm.waitForEvents(State.FOLLOW_LINE);
@@ -372,11 +391,13 @@ public class FtcTest extends FtcTeleOp implements FtcMenu.MenuButtons
 
                 case FOLLOW_LINE:
                     //
-                    // Follow the line until the touch switch is activated.
+                    // Disable light trigger.
+                    // Follow the line until we are at the given distance from
+                    // the wall.
                     //
                     robot.lightTrigger.setEnabled(false);
                     robot.pidDriveLineFollow.setTarget(
-                            wallDistance, RobotInfo.LINE_THRESHOLD, false, event, 0.0);
+                            wallDistance, RobotInfo.LINE_THRESHOLD, false, event);
                     sm.addEvent(event);
                     sm.waitForEvents(State.DONE);
                     break;

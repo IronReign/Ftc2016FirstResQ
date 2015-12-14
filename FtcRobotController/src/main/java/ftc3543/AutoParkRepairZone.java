@@ -46,10 +46,19 @@ public class AutoParkRepairZone implements TrcRobot.AutoStrategy
     {
         dashboard.displayPrintf(1, "ParkRepairZone: %s, %s, delay=%.0f",
                                 alliance.toString(), startPos.toString(), delay);
+        dashboard.displayPrintf(2, "RGBAH: [%d,%d,%d,%d,%x]",
+                                robot.colorSensor.red(),
+                                robot.colorSensor.green(),
+                                robot.colorSensor.blue(),
+                                robot.colorSensor.alpha(),
+                                robot.colorSensor.argb());
+        robot.pidCtrlSonar.displayPidInfo(3);
+        robot.pidCtrlLight.displayPidInfo(5);
 
         if (sm.isReady())
         {
             State state = (State)sm.getState();
+            dashboard.displayPrintf(7, "State=%s", state != null? state.toString(): "STOPPED!");
 
             switch (state)
             {
@@ -74,9 +83,8 @@ public class AutoParkRepairZone implements TrcRobot.AutoStrategy
                     // Go forward fast.
                     //
                     robot.pidDrive.setTarget(
-                            startPos == FtcAuto.StartPosition.NEAR_MOUNTAIN? 45.0: 60.0,
-                            0.0,
-                            false, event, 0.0);
+                            startPos == FtcAuto.StartPosition.NEAR_MOUNTAIN? 70.0: 90.0, 0.0,
+                            false, event);
                     sm.addEvent(event);
                     sm.waitForEvents(State.FIND_LINE);
                     break;
@@ -86,8 +94,8 @@ public class AutoParkRepairZone implements TrcRobot.AutoStrategy
                     // Drive forward slowly until we reach the line.
                     //
                     robot.lightTrigger.setEnabled(true);
-                    robot.pidCtrlDrive.setOutputRange(-0.5, 0.5);
-                    robot.pidDrive.setTarget(20.0, 0.0, false, event, 0.0);
+                    robot.pidCtrlDrive.setOutputRange(-0.3, 0.3);
+                    robot.pidDrive.setTarget(25.0, 0.0, false, event);
                     sm.addEvent(event);
                     sm.waitForEvents(State.TURN_TO_LINE);
                     break;
@@ -96,11 +104,9 @@ public class AutoParkRepairZone implements TrcRobot.AutoStrategy
                     //
                     // Turn slowly to find the edge of the line.
                     //
-                    robot.pidCtrlTurn.setOutputRange(-0.5, 0.5);
                     robot.pidDrive.setTarget(
-                            0.0,
-                            alliance == FtcAuto.Alliance.RED_ALLIANCE? -90.0: 90.0,
-                            false, event, 0.0);
+                            0.0, alliance == FtcAuto.Alliance.RED_ALLIANCE? -90.0: 90.0,
+                            false, event);
                     sm.addEvent(event);
                     sm.waitForEvents(State.FOLLOW_LINE);
                     break;
@@ -113,13 +119,14 @@ public class AutoParkRepairZone implements TrcRobot.AutoStrategy
                     robot.pidCtrlSonar.setOutputRange(-0.3, 0.3);;
                     robot.pidCtrlLight.setOutputRange(-0.5, 0.5);
                     robot.pidDriveLineFollow.setTarget(
-                            6.0, RobotInfo.LINE_THRESHOLD, false, event, 0.0);
+                            RobotInfo.BEACON_DISTANCE, RobotInfo.LINE_THRESHOLD,
+                            false, event, 3.0);
                     sm.addEvent(event);
                     sm.waitForEvents(State.DEPOSIT_CLIMBERS);
                     break;
 
                 case DEPOSIT_CLIMBERS:
-                    robot.hangingHook.extend();
+                    robot.hookServo.setPosition(RobotInfo.HANGINGHOOK_EXTEND_POSITION);
                     timer.set(5.0, event);
                     sm.addEvent(event);
                     sm.waitForEvents(State.DONE);
@@ -130,7 +137,7 @@ public class AutoParkRepairZone implements TrcRobot.AutoStrategy
                     //
                     // We are done.
                     //
-                    robot.hangingHook.retract();
+                    robot.hookServo.setPosition(RobotInfo.HANGINGHOOK_RETRACT_POSITION);
                     robot.pidCtrlDrive.setOutputRange(-1.0, 1.0);
                     robot.pidCtrlTurn.setOutputRange(-1.0, 1.0);
                     robot.pidCtrlSonar.setOutputRange(-1.0, 1.0);

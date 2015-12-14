@@ -20,7 +20,8 @@ public class RobotInfo
     public static final double TURN_TOLERANCE                   = 2.0;
     public static final double TURN_SETTLING                    = 0.2;
 
-    public static final double LINE_THRESHOLD                   = ((16.0 + 70.0)/2.0);
+    public static final double BEACON_DISTANCE                  = 2.0;
+    public static final double LINE_THRESHOLD                   = ((10.0 + 60.0)/2.0);
     public static final double LINEFOLLOW_KP                    = 0.02;
     public static final double LINEFOLLOW_KI                    = 0.0;
     public static final double LINEFOLLOW_KD                    = 0.0;
@@ -28,13 +29,14 @@ public class RobotInfo
     public static final double LINEFOLLOW_TOLERANCE             = 2.0;
     public static final double LINEFOLLOW_SETTLING              = 0.2;
 
-    public static final double SONAR_KP                         = 0.10;
+    public static final double SONAR_KP                         = 0.25;
     public static final double SONAR_KI                         = 0.0;
     public static final double SONAR_KD                         = 0.0;
     public static final double SONAR_KF                         = 0.0;
-    public static final double SONAR_TOLERANCE                  = 2.0;
+    public static final double SONAR_TOLERANCE                  = 0.2;
     public static final double SONAR_SETTLING                   = 0.2;
     public static final double SONAR_INCHES_PER_CM              = (1.0/2.54);
+    public static final double SONAR_SCALE_TO_INCHES            = (512.0/(5.0/1024));
     //
     // Elevator subsystem.
     //
@@ -48,8 +50,8 @@ public class RobotInfo
     public static final double ELEVATOR_MAX_HEIGHT              = 23.5;
     public static final double ELEVATOR_INCHES_PER_CLICK        = (23.5/9700.0);
     public static final double ELEVATOR_CAL_POWER               = -0.2;
-    public static final double BRAKE_OFF_POSITION               = 0.0;
-    public static final double BRAKE_ON_POSITION                = 0.35;
+    public static final double BRAKE_OFF_POSITION               = 0.1;
+    public static final double BRAKE_ON_POSITION                = 0.25;
 
     //
     // Slider subsystem.
@@ -84,7 +86,7 @@ public class RobotInfo
     //
     // HangingHook subsystem.
     //
-    public static final double HANGINGHOOK_RETRACT_POSITION     = 0.2;
+    public static final double HANGINGHOOK_RETRACT_POSITION     = 0.11;
     public static final double HANGINGHOOK_EXTEND_POSITION      = 0.8;
 
 }   //class RobotInfo
