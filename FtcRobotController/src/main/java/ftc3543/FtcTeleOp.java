@@ -14,11 +14,11 @@ public class FtcTeleOp extends FtcOpMode implements FtcGamepad.ButtonHandler
     private FtcGamepad operatorGamepad;
 
     //
-    // Implements FtcOpMode abstract methods.
+    // Implements FtcOpMode abstract method.
     //
 
     @Override
-    public void robotInit()
+    public void initRobot()
     {
         //
         // Initializing global objects.
@@ -32,11 +32,17 @@ public class FtcTeleOp extends FtcOpMode implements FtcGamepad.ButtonHandler
         operatorGamepad = new FtcGamepad("OperatorGamepad", gamepad2, this);
         driverGamepad.setYInverted(true);
         operatorGamepad.setYInverted(true);
-    }   //robotInit
+    }   //initRobot
+
+    //
+    // Overrides TrcRobot.RobotMode methods.
+    //
 
     @Override
     public void startMode()
     {
+        dashboard.clearDisplay();
+        robot.startMode(TrcRobot.RunMode.TELEOP_MODE);
         //
         // There is an issue with the gamepad objects that may not be valid
         // before waitForStart() is called. So we call the setGamepad method
@@ -44,12 +50,12 @@ public class FtcTeleOp extends FtcOpMode implements FtcGamepad.ButtonHandler
         //
         driverGamepad.setGamepad(gamepad1);
         operatorGamepad.setGamepad(gamepad2);
-        dashboard.clearDisplay();
     }   //startMode
 
     @Override
     public void stopMode()
     {
+        robot.stopMode(TrcRobot.RunMode.TELEOP_MODE);
     }   //stopMode
 
     @Override
@@ -84,38 +90,14 @@ public class FtcTeleOp extends FtcOpMode implements FtcGamepad.ButtonHandler
         dashboard.displayPrintf(6, "lowerLimit=%d,upperLimit=%d",
                                 robot.slider.isLowerLimitSwitchPressed()? 1: 0,
                                 robot.slider.isUpperLimitSwitchPressed()? 1: 0);
-        /*
-        //
-        // HangingHook subsystem.
-        //
-        double leftTrigger = operatorGamepad.getLeftTrigger(true);
-        double rightTrigger = operatorGamepad.getRightTrigger(true);
-        if (leftTrigger > 0.0)
-        {
-            robot.hangingHook.setPosition(
-                    RobotInfo.HANGINGHOOK_RETRACT_POSITION,
-                    leftTrigger*RobotInfo.HANGINGHOOK_STEP_RATE);
-        }
-        else if (rightTrigger > 0.0)
-        {
-            robot.hangingHook.setPosition(
-                    RobotInfo.HANGINGHOOK_EXTEND_POSITION,
-                    leftTrigger*RobotInfo.HANGINGHOOK_STEP_RATE);
-        }
-        */
     }   //runPeriodic
-
-    @Override
-    public void runContinuous()
-    {
-    }   //runContinuous
 
     //
     // Implements FtcGamepad.ButtonHandler interface.
     //
 
     @Override
-    public void gamepadButtonEvent(FtcGamepad gamepad, final int btnMask, final boolean pressed)
+    public void gamepadButtonEvent(FtcGamepad gamepad, int btnMask, boolean pressed)
     {
         dashboard.displayPrintf(7, "%s: %04x->%s",
                 gamepad.toString(), btnMask, pressed? "Pressed": "Released");
@@ -156,22 +138,22 @@ public class FtcTeleOp extends FtcOpMode implements FtcGamepad.ButtonHandler
                 case FtcGamepad.GAMEPAD_B:
                     if (pressed)
                     {
-                        robot.rightButtonPusher.setPosition(RobotInfo.PUSHER_EXTEND_RIGHT);
+                        robot.rightButtonPusher.extend();
                     }
                     else
                     {
-                        robot.rightButtonPusher.setPosition(RobotInfo.PUSHER_RETRACT_RIGHT);
+                        robot.rightButtonPusher.retract();
                     }
                     break;
 
                 case FtcGamepad.GAMEPAD_X:
                     if (pressed)
                     {
-                        robot.leftButtonPusher.setPosition(RobotInfo.PUSHER_EXTEND_LEFT);
+                        robot.leftButtonPusher.extend();
                     }
                     else
                     {
-                        robot.leftButtonPusher.setPosition(RobotInfo.PUSHER_RETRACT_LEFT);
+                        robot.leftButtonPusher.retract();
                     }
                     break;
 
@@ -223,12 +205,20 @@ public class FtcTeleOp extends FtcOpMode implements FtcGamepad.ButtonHandler
                     {
                         robot.hookServo.setPosition(RobotInfo.HANGINGHOOK_EXTEND_POSITION);
                     }
+                    else
+                    {
+                        robot.hookServo.setControllerOn(false);
+                    }
                     break;
 
                 case FtcGamepad.GAMEPAD_DPAD_DOWN:
                     if (pressed)
                     {
                         robot.hookServo.setPosition(RobotInfo.HANGINGHOOK_RETRACT_POSITION);
+                    }
+                    else
+                    {
+                        robot.hookServo.setControllerOn(false);
                     }
                     break;
 

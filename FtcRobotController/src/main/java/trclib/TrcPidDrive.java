@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package trclib;
 
 import hallib.HalUtil;
@@ -303,7 +326,7 @@ public class TrcPidDrive implements TrcTaskMgr.Task
             taskMgr.registerTask(
                     instanceName,
                     this,
-                    TrcTaskMgr.TaskType.POSTPERIODIC_TASK);
+                    TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK);
             flags |= PIDDRIVEF_ENABLED;
         }
         else
@@ -313,7 +336,7 @@ public class TrcPidDrive implements TrcTaskMgr.Task
                     TrcTaskMgr.TaskType.STOP_TASK);
             taskMgr.unregisterTask(
                     this,
-                    TrcTaskMgr.TaskType.POSTPERIODIC_TASK);
+                    TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK);
             flags &= ~PIDDRIVEF_ENABLED;
         }
 
@@ -326,10 +349,13 @@ public class TrcPidDrive implements TrcTaskMgr.Task
     //
     // Implements TrcTaskMgr.Task
     //
+
+    @Override
     public void startTask(TrcRobot.RunMode runMode)
     {
     }   //startTask
 
+    @Override
     public void stopTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "stopTask";
@@ -349,11 +375,23 @@ public class TrcPidDrive implements TrcTaskMgr.Task
         }
     }   //stopTask
 
+    @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //prePeriodicTask
 
+    @Override
     public void postPeriodicTask(TrcRobot.RunMode runMode)
+    {
+    }   //postPeriodicTask
+
+    @Override
+    public void preContinuousTask(TrcRobot.RunMode runMode)
+    {
+    }   //preContinuousTask
+
+    @Override
+    public void postContinuousTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "postPeriodic";
 
@@ -366,10 +404,10 @@ public class TrcPidDrive implements TrcTaskMgr.Task
 
         double xPower =
                 (((flags & PIDDRIVEF_TURN_ONLY) != 0) || (xPidCtrl == null))?
-                        0.0: xPidCtrl.getOutput();
+                0.0: xPidCtrl.getOutput();
         double yPower =
                 (((flags & PIDDRIVEF_TURN_ONLY) != 0) || (yPidCtrl == null))?
-                        0.0: yPidCtrl.getOutput();
+                0.0: yPidCtrl.getOutput();
         double turnPower = (turnPidCtrl == null)? 0.0: turnPidCtrl.getOutput();
 
         boolean expired =
@@ -380,7 +418,7 @@ public class TrcPidDrive implements TrcTaskMgr.Task
 
         if ((flags & PIDDRIVEF_SET_HEADING) != 0)
         {
-            driveBase.mecanumDrive_Cartesian(manualX, manualY, turnPower, 0.0);
+            driveBase.mecanumDrive_Cartesian(manualX, manualY, turnPower);
         }
         else if (expired ||
                  turnOnTarget &&
@@ -398,7 +436,7 @@ public class TrcPidDrive implements TrcTaskMgr.Task
             }
             else if (xPidCtrl != null)
             {
-                driveBase.mecanumDrive_Cartesian(0.0, 0.0, 0.0, 0.0);
+                driveBase.mecanumDrive_Cartesian(0.0, 0.0, 0.0);
             }
             else
             {
@@ -407,7 +445,7 @@ public class TrcPidDrive implements TrcTaskMgr.Task
         }
         else if (xPidCtrl != null)
         {
-            driveBase.mecanumDrive_Cartesian(xPower, yPower, turnPower, 0.0);
+            driveBase.mecanumDrive_Cartesian(xPower, yPower, turnPower);
         }
         else
         {
@@ -418,14 +456,6 @@ public class TrcPidDrive implements TrcTaskMgr.Task
         {
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.TASK);
         }
-    }   //postPeriodicTask
-
-    public void preContinuousTask(TrcRobot.RunMode runMode)
-    {
-    }   //preContinuousTask
-
-    public void postContinuousTask(TrcRobot.RunMode runMode)
-    {
     }   //postContinuousTask
 
 }   //class TrcPidDrive

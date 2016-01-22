@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package ftclib;
 
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -7,7 +30,6 @@ import hallib.HalUtil;
 import trclib.TrcAnalogInput;
 import trclib.TrcDbgTrace;
 import trclib.TrcFilter;
-import trclib.TrcSensorData;
 
 /**
  * This class implements a platform dependent AnalogInput sensor
@@ -43,7 +65,6 @@ public class FtcAnalogInput extends TrcAnalogInput
         }
 
         sensor = hardwareMap.analogInput.get(instanceName);
-        setEnabled(true);
     }   //FtcAnalogInput
 
     /**
@@ -68,16 +89,41 @@ public class FtcAnalogInput extends TrcAnalogInput
         this(instanceName, null);
     }   //FtcAnalogInput
 
+    /**
+     * This method calibrates the sensor.
+     */
+    public void calibrate()
+    {
+        calibrate(DataType.INPUT_DATA);
+    }   //calibrate
+
     //
     // Implements TrcAnalogInput abstract methods.
     //
 
+    /**
+     * This method returns the raw sensor data of the specified type.
+     *
+     * @return raw sensor data of the specified type.
+     */
     @Override
-    public TrcSensorData getRawData()
+    public SensorData getRawData(DataType dataType)
     {
         final String funcName = "getRawData";
-        TrcSensorData data = new TrcSensorData(
-                HalUtil.getCurrentTime(), sensor.getValue());
+        SensorData data = null;
+
+        //
+        // Ultrasonic sensor supports only INPUT_DATA type.
+        //
+        if (dataType == DataType.INPUT_DATA)
+        {
+            data = new SensorData(HalUtil.getCurrentTime(), (double)sensor.getValue());
+        }
+        else
+        {
+            throw new UnsupportedOperationException(
+                    "AnalogInput sensor only support INPUT_DATA type.");
+        }
 
         if (debugEnabled)
         {
@@ -88,28 +134,5 @@ public class FtcAnalogInput extends TrcAnalogInput
 
         return data;
     }   //getRawData
-
-    /**
-     * This method returns the raw integrated data which is not supported.
-     *
-     * @throws UnsupportedOperationException exception.
-     */
-    @Override
-    public TrcSensorData getRawIntegratedData()
-    {
-        throw new UnsupportedOperationException("This sensor does not support integrated data.");
-    }   //getRawIntegratedData
-
-    /**
-     * This method returns the raw integrated data which is not supported.
-     *
-     * @throws UnsupportedOperationException exception.
-     */
-    @Override
-    public TrcSensorData getRawDoubleIntegratedData()
-    {
-        throw new UnsupportedOperationException(
-                "This sensor does not support double integrated data.");
-    }   //getRawDoubleIntegratedData
 
 }   //class FtcAnalogInput

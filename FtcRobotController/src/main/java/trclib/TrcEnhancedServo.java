@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package trclib;
 
 import hallib.HalUtil;
@@ -95,7 +118,7 @@ public class TrcEnhancedServo implements TrcTaskMgr.Task
         else if (servoStepping)
         {
             TrcTaskMgr.getInstance().unregisterTask(this, TrcTaskMgr.TaskType.STOP_TASK);
-            TrcTaskMgr.getInstance().unregisterTask(this, TrcTaskMgr.TaskType.POSTPERIODIC_TASK);
+            TrcTaskMgr.getInstance().unregisterTask(this, TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK);
             servoStepping = false;
         }
     }   //stop
@@ -126,7 +149,7 @@ public class TrcEnhancedServo implements TrcTaskMgr.Task
             this.currPosition = servo1.getPosition();
             servoStepping = true;
             TrcTaskMgr.getInstance().registerTask(
-                    "ServoSteppingTask", this, TrcTaskMgr.TaskType.POSTPERIODIC_TASK);
+                    "ServoSteppingTask", this, TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK);
             TrcTaskMgr.getInstance().registerTask(
                     "ServoSteppingTask", this, TrcTaskMgr.TaskType.STOP_TASK);
         }
@@ -159,20 +182,35 @@ public class TrcEnhancedServo implements TrcTaskMgr.Task
     //
     // Implements TrcTaskMgr.Task
     //
+
+    @Override
     public void startTask(TrcRobot.RunMode runMode)
     {
     }   //startTask
 
+    @Override
     public void stopTask(TrcRobot.RunMode runMode)
     {
         stop();
     }   //stopTask
 
+    @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //prePeriodicTask
 
+    @Override
     public void postPeriodicTask(TrcRobot.RunMode runMode)
+    {
+    }   //postPeriodicTask
+
+    @Override
+    public void preContinuousTask(TrcRobot.RunMode runMode)
+    {
+    }   //preContinuousTask
+
+    @Override
+    public void postContinuousTask(TrcRobot.RunMode runMode)
     {
         if (runMode != TrcRobot.RunMode.DISABLED_MODE)
         {
@@ -214,14 +252,6 @@ public class TrcEnhancedServo implements TrcTaskMgr.Task
                 servo2.setPosition(currPosition);
             }
         }
-    }   //postPeriodicTask
-
-    public void preContinuousTask(TrcRobot.RunMode runMode)
-    {
-    }   //preContinuousTask
-
-    public void postContinuousTask(TrcRobot.RunMode runMode)
-    {
     }   //postContinuousTask
 
 }   //class TrcEnhancedServo

@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package ftclib;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -18,17 +41,18 @@ import trclib.TrcTimer;
  */
 public class FtcServo extends TrcServo implements TrcTaskMgr.Task
 {
+    private static final String moduleName = "FtcServo";
+    private static final boolean debugEnabled = false;
+    private TrcDbgTrace dbgTrace = null;
+
     private enum State
     {
-        ENABLE_CONTROLLER,
         SET_POSITION,
         DISABLE_CONTROLLER,
         DONE
     }   //enum State
 
-    private static final String moduleName = "FtcServo";
-    private static final boolean debugEnabled = false;
-    private TrcDbgTrace dbgTrace = null;
+    private static final double CONTROLLER_ONOFF_DELAY = 0.1;
 
     private String instanceName;
     private Servo servo;
@@ -99,6 +123,14 @@ public class FtcServo extends TrcServo implements TrcTaskMgr.Task
      */
     public void cancel()
     {
+        final String funcName = "cancel";
+
+        if (debugEnabled)
+        {
+            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API);
+            dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
+        }
+
         if (sm.isEnabled())
         {
             timer.cancel();
@@ -112,16 +144,16 @@ public class FtcServo extends TrcServo implements TrcTaskMgr.Task
      *
      * @param enabled specifies true to enable the state machine task, false otherwise.
      */
-    public void setTaskEnabled(boolean enabled)
+    private void setTaskEnabled(boolean enabled)
     {
         if (enabled)
         {
             TrcTaskMgr.getInstance().registerTask(
-                    instanceName, this, TrcTaskMgr.TaskType.POSTPERIODIC_TASK);
+                    instanceName, this, TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK);
         }
         else
         {
-            TrcTaskMgr.getInstance().unregisterTask(this, TrcTaskMgr.TaskType.POSTPERIODIC_TASK);
+            TrcTaskMgr.getInstance().unregisterTask(this, TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK);
         }
     }
 
@@ -143,9 +175,37 @@ public class FtcServo extends TrcServo implements TrcTaskMgr.Task
         cancel();
         servoPos = pos;
         servoOnTime = onTime;
-        sm.start(State.ENABLE_CONTROLLER);
+        sm.start(State.SET_POSITION);
         setTaskEnabled(true);
     }   //setPositionWithOnTime
+
+    /**
+     * The method eanbles/disables the servo controller. If the servo controller is disabled,
+     * all servos on the controller will go limp. This is useful for preventing the servos from
+     * burning up if it is held against a heavy load.
+     *
+     * @param on specifies true to enable the servo controller, false otherwise.
+     */
+    public void setControllerOn(boolean on)
+    {
+        final String funcName = "setControllerOn";
+
+        if (debugEnabled)
+        {
+            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
+                                "on=%s", Boolean.toString(on));
+            dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
+        }
+
+        if (on)
+        {
+            controller.pwmEnable();
+        }
+        else
+        {
+            controller.pwmDisable();
+        }
+    }   //setControllerOn
 
     //
     // Implements TrcServo abstract methods.
@@ -237,17 +297,30 @@ public class FtcServo extends TrcServo implements TrcTaskMgr.Task
     // Implements TrcTaskMgr.Task
     //
 
+    @Override
     public void startTask(TrcRobot.RunMode runMode)
     {
     }   //startTask
 
+    @Override
     public void stopTask(TrcRobot.RunMode runMode)
     {
     }   //stopTask
 
+    @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //prePeriodicTask
+
+    @Override
+    public void postPeriodicTask(TrcRobot.RunMode runMode)
+    {
+    }   //postPeriodicTask
+
+    @Override
+    public void preContinuousTask(TrcRobot.RunMode runMode)
+    {
+    }   //preContinuousTask
 
     /**
      * This method is called periodically to run a state machine that will enable
@@ -256,18 +329,14 @@ public class FtcServo extends TrcServo implements TrcTaskMgr.Task
      *
      * @param runMode specifies the competition mode that is running.
      */
-    public void postPeriodicTask(TrcRobot.RunMode runMode)
+    @Override
+    public void postContinuousTask(TrcRobot.RunMode runMode)
     {
         if (sm.isReady())
         {
             State state = (State)sm.getState();
             switch (state)
             {
-                case ENABLE_CONTROLLER:
-                    controller.pwmEnable();
-                    sm.setState(State.SET_POSITION);
-                    break;
-
                 case SET_POSITION:
                     servo.setPosition(servoPos);
                     timer.set(servoOnTime, event);
@@ -277,7 +346,9 @@ public class FtcServo extends TrcServo implements TrcTaskMgr.Task
 
                 case DISABLE_CONTROLLER:
                     controller.pwmDisable();
-                    sm.setState(State.DONE);
+                    timer.set(CONTROLLER_ONOFF_DELAY, event);
+                    sm.addEvent(event);
+                    sm.waitForEvents(State.DONE);
                     break;
 
                 case DONE:
@@ -286,14 +357,6 @@ public class FtcServo extends TrcServo implements TrcTaskMgr.Task
                     setTaskEnabled(false);
             }
         }
-    }   //postPeriodicTask
-
-    public void preContinuousTask(TrcRobot.RunMode runMode)
-    {
-    }   //preContinuousTask
-
-    public void postContinuousTask(TrcRobot.RunMode runMode)
-    {
     }   //postContinuousTask
 
 }   //class FtcServo

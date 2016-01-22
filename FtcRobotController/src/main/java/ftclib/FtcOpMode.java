@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package ftclib;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -12,52 +35,20 @@ import trclib.TrcTaskMgr;
  * This class implements a cooperative multi-tasking scheduler
  * extending LinearOpMode.
  */
-public abstract class FtcOpMode extends LinearOpMode
+public abstract class FtcOpMode extends LinearOpMode implements TrcRobot.RobotMode
 {
-    /**
-     * This abstract method is called when the "Init" button on the
-     * Driver Station phone is pressed. Typically, you put code to
-     * initialze the robot here.
-     */
-    public abstract void robotInit();
-
-    /**
-     * This abstract method is called when the "Play" button on the
-     * Driver Station phone is pressed. Typcially, you put code that
-     * will prepare the robot for start of competition here. Most of
-     * the time, there is nothing to do in this method because most of
-     * the initialization is already done in robotInit().
-     */
-    public abstract void startMode();
-
-    /**
-     * This abstract method is called when competition mode is about
-     * to end. Typically, you put code that will do clean up here.
-     * Most of the time, there is nothing to do because when the program
-     * ends, the robot will be stopped anyway.
-     */
-    public abstract void stopMode();
-
-    /**
-     * This abstract method is called periodically about 50 times a second.
-     * This is where you put the bulk of your competition code.
-     */
-    public abstract void runPeriodic();
-
-    /**
-     * This abstract method is called periodically much faster than runPeriodic().
-     * Typically, you put code that requires servicing at a higher frequency here.
-     * Most of the time, there is nothing to do here because most robot actions
-     * can be handled adequately with runPeriodic().
-     */
-    public abstract void runContinuous();
-
     private static final String moduleName = "FtcOpMode";
     private static final boolean debugEnabled = false;
     private TrcDbgTrace dbgTrace = null;
-
-    private static TrcDbgTrace opModeTrace = null;
+    private static TrcDbgTrace opModeTracer = null;
     private static String opModeName = null;
+
+
+    /**
+     * This method is called to initialize the robot. In FTC, this is called when the
+     * "Init" button on the Driver Station phone is pressed.
+     */
+    public abstract void initRobot();
 
     private final static String OPMODE_AUTO     = "FtcAuto";
     private final static String OPMODE_TELEOP   = "FtcTeleOp";
@@ -66,7 +57,7 @@ public abstract class FtcOpMode extends LinearOpMode
     private final static long LOOP_PERIOD = 20;
     private TrcRobot.RunMode runMode = TrcRobot.RunMode.INVALID_MODE;
     private static FtcOpMode instance = null;
-    private double startTime = 0.0;
+    private static double startTime = 0.0;
 
     /**
      * Constructor: Creates an instance of the object. It calls the constructor
@@ -103,16 +94,16 @@ public abstract class FtcOpMode extends LinearOpMode
      *
      * @return global opMode trace object.
      */
-    public static TrcDbgTrace getOpModeTraceInstance()
+    public static TrcDbgTrace getOpModeTracer()
     {
-        if (opModeTrace == null)
+        if (opModeTracer == null)
         {
-            opModeTrace = new TrcDbgTrace(
+            opModeTracer = new TrcDbgTrace(
                     opModeName, false, TrcDbgTrace.TraceLevel.API, TrcDbgTrace.MsgLevel.INFO);
         }
 
-        return opModeTrace;
-    }   //getOpModeTraceInstance
+        return opModeTracer;
+    }   //getOpModeTracer
 
     /**
      * This method sets the OpMode trace configuration. The OpMode trace object was
@@ -124,11 +115,34 @@ public abstract class FtcOpMode extends LinearOpMode
      * @param traceLevel specifies the method tracing level.
      * @param msgLevel specifies the message tracing level.
      */
-    public static void setOpModeTraceConfig(
+    public static void setOpModeTracerConfig(
             boolean traceEnabled, TrcDbgTrace.TraceLevel traceLevel, TrcDbgTrace.MsgLevel msgLevel)
     {
-        opModeTrace.setDbgTraceConfig(traceEnabled, traceLevel, msgLevel);
-    }   //setOpModeTraceConfig
+        opModeTracer.setDbgTraceConfig(traceEnabled, traceLevel, msgLevel);
+    }   //setOpModeTracerConfig
+
+    /**
+     * This method returns the name of the active OpMode.
+     *
+     * @return active OpMode name.
+     */
+    public static String getOpModeName()
+    {
+        return opModeName;
+    }   //getOpModeName
+
+    /**
+     * This method returns the elapsed time since competition starts.
+     * This is the elapsed time after robotInit() is called and after
+     * waitForStart() has returned (i.e. The "Play" button is pressed
+     * on the Driver Station.
+     *
+     * @return OpMode start elapsed time in seconds.
+     */
+    public static double getElapsedTime()
+    {
+        return HalUtil.getCurrentTime() - startTime;
+    }   //getElapsedTime
 
     //
     // Implements LinearOpMode
@@ -145,7 +159,7 @@ public abstract class FtcOpMode extends LinearOpMode
     {
         final String funcName = "runOpMode";
         TrcTaskMgr taskMgr = TrcTaskMgr.getInstance();
-        HalDashboard dashboard = HalDashboard.getInstance();
+        HalDashboard dashboard = new HalDashboard(telemetry);
 
         if (debugEnabled)
         {
@@ -155,6 +169,7 @@ public abstract class FtcOpMode extends LinearOpMode
                         moduleName, false, TrcDbgTrace.TraceLevel.API, TrcDbgTrace.MsgLevel.INFO);
             }
         }
+
         //
         // Determine run mode.
         // Note that it means the OpMode must have "FtcAuto", "FtcTeleOp" or "FtcTest"
@@ -201,7 +216,7 @@ public abstract class FtcOpMode extends LinearOpMode
         {
             dbgTrace.traceInfo(funcName, "Runing robotInit ...");
         }
-        robotInit();
+        initRobot();
 
         //
         // Wait for the start of autonomous mode.
@@ -291,5 +306,46 @@ public abstract class FtcOpMode extends LinearOpMode
         }
         taskMgr.executeTaskType(TrcTaskMgr.TaskType.STOP_TASK, runMode);
     }   //runOpMode
+
+    /**
+     * This method is called when the competition mode is about to start. In FTC, this is
+     * called when the "Play" button on the Driver Station phone is pressed. Typically,
+     * you put code that will prepare the robot for start of competition here such as
+     * resetting the encoders/sensors and enabling some sensors to start sampling.
+     */
+    @Override
+    public void startMode()
+    {
+    }   //startMode
+
+    /**
+     * This method is called when competition mode is about to end. Typically, you put code
+     * that will do clean up here such as disabling the sampling of some sensors.
+     */
+    @Override
+    public void stopMode()
+    {
+    }   //stopMode
+
+    /**
+     * This method is called periodically about 50 times a second. Typically, you put code
+     * that doesn't require frequent update here. For example, TeleOp joystick code can be
+     * put here since human responses are considered slow.
+     */
+    @Override
+    public void runPeriodic()
+    {
+    }   //runPeriodic
+
+    /**
+     * This method is called periodically as fast as the control system allows. Typically,
+     * you put code that requires servicing at a higher frequency here. To make the robot
+     * as responsive and as accurate as possible especially in autonomous mode, you will
+     * typically put that code here.
+     */
+    @Override
+    public void runContinuous()
+    {
+    }   //runContinuous
 
 }   //class FtcOpMode

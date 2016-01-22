@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package hallib;
 
 import trclib.TrcMotorController;
@@ -137,8 +160,9 @@ public class HalRobotDrive
      *
      * @param magnitude specifies the magnitude value.
      * @param curve specifies the curve value.
+     * @param inverted specifies true to invert control (i.e. robot front becomes robot back).
      */
-    public void drive(double magnitude, double curve)
+    public void drive(double magnitude, double curve, boolean inverted)
     {
         final String funcName = "drive";
         double leftOutput;
@@ -147,7 +171,8 @@ public class HalRobotDrive
         if (debugEnabled)
         {
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
-                                "mag=%f,curve=%f", magnitude, curve);
+                                "mag=%f,curve=%f,inverted=%s",
+                                magnitude, curve, Boolean.toString(inverted));
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
@@ -178,7 +203,18 @@ public class HalRobotDrive
             leftOutput = magnitude;
             rightOutput = magnitude;
         }
-        tankDrive(leftOutput, rightOutput);
+        tankDrive(leftOutput, rightOutput, inverted);
+    }   //drive
+
+    /**
+     * This method drives the motors with the given magnitude and curve values.
+     *
+     * @param magnitude specifies the magnitude value.
+     * @param curve specifies the curve value.
+     */
+    public void drive(double magnitude, double curve)
+    {
+        drive(magnitude, curve, false);
     }   //drive
 
     /**
@@ -311,20 +347,29 @@ public class HalRobotDrive
      *
      * @param leftPower specifies left power value.
      * @param rightPower specifies right power value.
+     * @param inverted specifies true to invert control (i.e. robot front becomes robot back).
      */
-    public void tankDrive(double leftPower, double rightPower)
+    public void tankDrive(double leftPower, double rightPower, boolean inverted)
     {
         final String funcName = "tankDrive";
 
         if (debugEnabled)
         {
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
-                                "leftPower=%f,rightPower=%f", leftPower, rightPower);
+                                "leftPower=%f,rightPower=%f,inverted=%s",
+                                leftPower, rightPower, Boolean.toString(inverted));
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
         leftPower = TrcUtil.limit(leftPower);
         rightPower = TrcUtil.limit(rightPower);
+
+        if (inverted)
+        {
+            double swap = leftPower;
+            leftPower = -rightPower;
+            rightPower = -swap;
+        }
 
         if (frontLeftMotor != null)
         {
@@ -348,14 +393,27 @@ public class HalRobotDrive
     }   //tankDrive
 
     /**
+     * This method implements tank drive where leftPower controls the left motors
+     * and right power controls the right motors.
+     *
+     * @param leftPower specifies left power value.
+     * @param rightPower specifies right power value.
+     */
+    public void tankDrive(double leftPower, double rightPower)
+    {
+        tankDrive(leftPower, rightPower, false);
+    }   //tankDrive
+
+    /**
      * This method implements arcade drive where drivePower controls how fast
      * the robot goes in the y-axis and turnPower controls how fast it will
      * turn.
      *
      * @param drivePower specifies the drive power value.
      * @param turnPower specifies the turn power value.
+     * @param inverted specifies true to invert control (i.e. robot front becomes robot back).
      */
-    public void arcadeDrive(double drivePower, double turnPower)
+    public void arcadeDrive(double drivePower, double turnPower, boolean inverted)
     {
         final String funcName = "arcadeDrive";
         double leftPower;
@@ -364,7 +422,8 @@ public class HalRobotDrive
         if (debugEnabled)
         {
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
-                                "drivePower=%f,turnPower=%f", drivePower, turnPower);
+                                "drivePower=%f,turnPower=%f,inverted=%s",
+                                drivePower, turnPower, Boolean.toString(inverted));
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
@@ -416,7 +475,20 @@ public class HalRobotDrive
             leftPower = drivePower + turnPower;
             rightPower = drivePower - turnPower;
         }
-        tankDrive(leftPower, rightPower);
+        tankDrive(leftPower, rightPower, inverted);
+    }   //arcadeDrive
+
+    /**
+     * This method implements arcade drive where drivePower controls how fast
+     * the robot goes in the y-axis and turnPower controls how fast it will
+     * turn.
+     *
+     * @param drivePower specifies the drive power value.
+     * @param turnPower specifies the turn power value.
+     */
+    public void arcadeDrive(double drivePower, double turnPower)
+    {
+        arcadeDrive(drivePower, turnPower, false);
     }   //arcadeDrive
 
     /**
@@ -427,16 +499,19 @@ public class HalRobotDrive
      * @param x specifies the x power.
      * @param y specifies the y power.
      * @param rotation specifies the rotating power.
+     * @param inverted specifies true to invert control (i.e. robot front becomes robot back).
      * @param gyroAngle specifies the gyro angle to maintain.
      */
-    public void mecanumDrive_Cartesian(double x, double y, double rotation, double gyroAngle)
+    public void mecanumDrive_Cartesian(double x, double y, double rotation,
+                                       boolean inverted, double gyroAngle)
     {
         final String funcName = "mecanumDrive_Cartesian";
 
         if (debugEnabled)
         {
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
-                                "x=%f,y=%f,rot=%f,angle=%f", x, y, rotation, gyroAngle);
+                                "x=%f,y=%f,rot=%f,inverted=%s,angle=%f",
+                                x, y, rotation, Boolean.toString(inverted), gyroAngle);
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
@@ -448,6 +523,12 @@ public class HalRobotDrive
         x = TrcUtil.limit(x);
         y = TrcUtil.limit(y);
         rotation = TrcUtil.limit(rotation);
+
+        if (inverted)
+        {
+            x = -x;
+            y = -y;
+        }
 
         double cosA = Math.cos(Math.toRadians(gyroAngle));
         double sinA = Math.sin(Math.toRadians(gyroAngle));
@@ -483,21 +564,53 @@ public class HalRobotDrive
     }   //mecanumDrive_Cartesian
 
     /**
+     * This method implements mecanum drive where x controls how fast the robot will
+     * go in the x direction, and y controls how fast the robot will go in the y direction.
+     * Rotation controls how fast the robot rotates and gyroAngle specifies the heading
+     * the robot should maintain.
+     * @param x specifies the x power.
+     * @param y specifies the y power.
+     * @param rotation specifies the rotating power.
+     * @param inverted specifies true to invert control (i.e. robot front becomes robot back).
+     */
+    public void mecanumDrive_Cartesian(double x, double y, double rotation, boolean inverted)
+    {
+        mecanumDrive_Cartesian(x, y, rotation, inverted, 0.0);
+    }   //mecanumDrive_Cartesian
+
+    /**
+     * This method implements mecanum drive where x controls how fast the robot will
+     * go in the x direction, and y controls how fast the robot will go in the y direction.
+     * Rotation controls how fast the robot rotates.
+     *
+     * @param x specifies the x power.
+     * @param y specifies the y power.
+     * @param rotation specifies the rotating power.
+     */
+    public void mecanumDrive_Cartesian(double x, double y, double rotation)
+    {
+        mecanumDrive_Cartesian(x, y, rotation, false, 0.0);
+    }   //mecanumDrive_Cartesian
+
+    /**
      * This method implements mecanum drive where magnitude controls how fast the robot
      * will go in the given direction and how fast it will robote.
      *
      * @param magnitude specifies the magnitude combining x and y axes.
-     * @param direction specifies the direction.
+     * @param direction specifies the direction in degrees.
      * @param rotation specifies the rotation power.
+     * @param inverted specifies true to invert control (i.e. robot front becomes robot back).
      */
-    public void mecanumDrive_Polar(double magnitude, double direction, double rotation)
+    public void mecanumDrive_Polar(double magnitude, double direction, double rotation,
+                                   boolean inverted)
     {
         final String funcName = "mecanumDrive_Polar";
 
         if (debugEnabled)
         {
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
-                                "mag=%f,dir=%f,rot=%f", magnitude, direction, rotation);
+                                "mag=%f,dir=%f,rot=%f,inverted=%s",
+                                magnitude, direction, rotation, Boolean.toString(inverted));
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
@@ -507,6 +620,12 @@ public class HalRobotDrive
         }
 
         magnitude = TrcUtil.limit(magnitude)*Math.sqrt(2.0);
+        if (inverted)
+        {
+            direction += 180.0;
+            direction %= 360.0;
+        }
+
         double dirInRad = Math.toRadians(direction + 45.0);
         double cosD = Math.cos(dirInRad);
         double sinD = Math.sin(dirInRad);
@@ -537,6 +656,19 @@ public class HalRobotDrive
         {
             rearRightMotor.setPower(wheelSpeeds[MotorType.kRearRight_val]);
         }
+    }   //mecanumDrive_Polar
+
+    /**
+     * This method implements mecanum drive where magnitude controls how fast the robot
+     * will go in the given direction and how fast it will robote.
+     *
+     * @param magnitude specifies the magnitude combining x and y axes.
+     * @param direction specifies the direction in degrees.
+     * @param rotation specifies the rotation power.
+     */
+    public void mecanumDrive_Polar(double magnitude, double direction, double rotation)
+    {
+        mecanumDrive_Polar(magnitude, direction, rotation, false);
     }   //mecanumDrive_Polar
 
     /**

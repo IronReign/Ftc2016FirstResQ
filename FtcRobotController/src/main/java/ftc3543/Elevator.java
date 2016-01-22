@@ -17,20 +17,21 @@ public class Elevator implements TrcPidController.PidInput,
     // the elevator and a servo to engage/disengage the brake.
     //
     private FtcTouchSensor lowerLimitSwitch;
-    private FtcTouchSensor upperLimitSwitch;
+//    private FtcTouchSensor upperLimitSwitch;
     private TrcDigitalTrigger lowerLimitTrigger;
     private FtcDcMotor motor;
     private TrcPidController pidCtrl;
     private TrcPidMotor pidMotor;
     private FtcServo brake;
+    private boolean brakeOn = false;
 
     public Elevator()
     {
         lowerLimitSwitch = new FtcTouchSensor("lowerLimitSwitch");
-        upperLimitSwitch = new FtcTouchSensor("upperLimitSwitch");
+//        upperLimitSwitch = new FtcTouchSensor("upperLimitSwitch");
         lowerLimitTrigger = new TrcDigitalTrigger("elevatorLowerLimit", lowerLimitSwitch, this);
         lowerLimitTrigger.setEnabled(true);
-        motor = new FtcDcMotor("elevator", lowerLimitSwitch, upperLimitSwitch);
+        motor = new FtcDcMotor("elevator", lowerLimitSwitch);//, upperLimitSwitch);
         pidCtrl = new TrcPidController(
                 "elevator",
                 RobotInfo.ELEVATOR_KP, RobotInfo.ELEVATOR_KI,
@@ -53,10 +54,18 @@ public class Elevator implements TrcPidController.PidInput,
     {
         brake.setPosition(
                 brakeOn? RobotInfo.BRAKE_ON_POSITION: RobotInfo.BRAKE_OFF_POSITION);
+        this.brakeOn = brakeOn;
     }
 
     public void setPower(double power)
     {
+        if (power != 0.0 && brakeOn)
+        {
+            //
+            // Elevator is moving and brake is ON, disengage brake.
+            //
+            setBrakeOn(false);
+        }
         pidMotor.setPower(power);
     }
 
@@ -82,7 +91,7 @@ public class Elevator implements TrcPidController.PidInput,
 
     public boolean isUpperLimitSwitchPressed()
     {
-        return upperLimitSwitch.isActive();
+        return false;//upperLimitSwitch.isActive();
     }
 
     public void displayDebugInfo(int lineNum)
@@ -93,6 +102,8 @@ public class Elevator implements TrcPidController.PidInput,
     //
     // Implements TrcPidController.PidInput.
     //
+
+    @Override
     public double getInput(TrcPidController pidCtrl)
     {
         double value = 0.0;
@@ -109,6 +120,7 @@ public class Elevator implements TrcPidController.PidInput,
     // Implements TrcDigitalTrigger.TriggerHandler
     //
 
+    @Override
     public void DigitalTriggerEvent(TrcDigitalTrigger digitalTrigger, boolean active)
     {
         if (digitalTrigger == lowerLimitTrigger)

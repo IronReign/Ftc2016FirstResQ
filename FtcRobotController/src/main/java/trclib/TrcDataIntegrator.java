@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package trclib;
 
 import hallib.HalUtil;
@@ -16,26 +39,27 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
     private TrcDbgTrace dbgTrace = null;
 
     private final String instanceName;
-    private TrcSensorData.DataProvider[] dataProviders = null;
-    private String[] dataNames = null;
-    private TrcSensorData[] inputData = null;
-    private TrcSensorData[] integratedData = null;
-    private TrcSensorData[] doubleIntegratedData = null;
-    private double[] prevTimes = null;
+    private TrcSensor sensor;
+    private Object dataType;
+    private int numAxes;
+    private TrcSensor.SensorData[] inputData;
+    private TrcSensor.SensorData[] integratedData;
+    private TrcSensor.SensorData[] doubleIntegratedData;
+    private double[] prevTimes;
+    private boolean unwindIntegratedData = false;
 
     /**
      * Constructor: Creates an instance of the object.
      *
      * @param instanceName specifies the instance name.
-     * @param dataProviders specifies an array of data provider objects.
-     * @param dataNames specifies an array of data names to be used to identify the data when
-     *                  calling the data provider.
+     * @param sensor specifies the sensor object that needs integration.
+     * @param dataType specifies the data type to be integrated.
      * @param doubleIntegration specifies true to do double integration, false otherwise.
      */
     public TrcDataIntegrator(
             final String instanceName,
-            TrcSensorData.DataProvider[] dataProviders,
-            String[] dataNames,
+            TrcSensor sensor,
+            Object dataType,
             boolean doubleIntegration)
     {
         if (debugEnabled)
@@ -47,63 +71,42 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
                     TrcDbgTrace.MsgLevel.INFO);
         }
 
-        if (dataProviders == null || dataNames == null)
+        if (sensor == null)
         {
-            throw new NullPointerException("dataProviders/dataNames cannot be null.");
-        }
-        else if (dataProviders.length == 0)
-        {
-            throw new IllegalArgumentException(
-                    "dataProviders array must have at least one element.");
-        }
-        else if (dataProviders.length != dataNames.length)
-        {
-            throw new IllegalArgumentException(
-                    "dataProviders/dataNames arrays must have same number of elements.");
+            throw new NullPointerException("sensor cannot be null.");
         }
 
         this.instanceName = instanceName;
-        this.dataProviders = dataProviders;
-        this.dataNames = dataNames;
+        this.sensor = sensor;
+        this.dataType = dataType;
+        numAxes = sensor.getNumAxes();
 
-        inputData = new TrcSensorData[dataProviders.length];
-        integratedData = new TrcSensorData[dataProviders.length];
-        if (doubleIntegration)
+        inputData = new TrcSensor.SensorData[numAxes];
+        integratedData = new TrcSensor.SensorData[numAxes];
+        doubleIntegratedData = doubleIntegration? new TrcSensor.SensorData[numAxes]: null;
+        prevTimes = new double[numAxes];
+
+        for (int i = 0; i < numAxes; i++)
         {
-            doubleIntegratedData = new TrcSensorData[dataProviders.length];
-        }
-        prevTimes = new double[dataProviders.length];
-
-        for (int i = 0; i < dataProviders.length; i++)
-        {
-            if (dataProviders[i] == null)
-            {
-                throw new NullPointerException("Elements in dataProviders cannot be null.");
-            }
-
-            integratedData[i] = new TrcSensorData(0.0, 0.0);
+            integratedData[i] = new TrcSensor.SensorData(0.0, 0.0);
             if (doubleIntegratedData != null)
             {
-                doubleIntegratedData[i] = new TrcSensorData(0.0, 0.0);
+                doubleIntegratedData[i] = new TrcSensor.SensorData(0.0, 0.0);
             }
             prevTimes[i] = 0.0;
         }
-    }   //TrcDataProcessor
+    }   //TrcDataIntegrator
 
     /**
      * Constructor: Creates an instance of the object.
      *
      * @param instanceName specifies the instance name.
-     * @param dataProviders specifies an array of data provider objects.
-     * @param dataNames specifies an array of data names to be used to identify the data when
-     *                  calling the data provider.
+     * @param sensor specifies the sensor object that needs integration.
+     * @param dataType specifies the data type to be integrated.
      */
-    public TrcDataIntegrator(
-            final String instanceName,
-            TrcSensorData.DataProvider[] dataProviders,
-            String[] dataNames)
+    public TrcDataIntegrator(final String instanceName, TrcSensor sensor, Object dataType)
     {
-        this(instanceName, dataProviders, dataNames, false);
+        this(instanceName, sensor, dataType, false);
     }   //TrcDataProcessor
 
     /**
@@ -115,6 +118,18 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
     {
         return instanceName;
     }   //toString
+
+    /**
+     * This method allows the caller to unwind the integrated data if the
+     * data point of all axes are zero.
+     *
+     * @param unwindData specifies true to reset integrated data if all inputs are zero,
+     *                   false otherwise.
+     */
+    public void setUnwindIntegratedData(boolean unwindData)
+    {
+        unwindIntegratedData = unwindData;
+    }   //setUnwindIntegratedData
 
     /**
      * This method enables the data integrator. The data integrator is not
@@ -184,15 +199,7 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
 
         for (int i = 0; i < integratedData.length; i++)
         {
-            if (integratedData[i] != null)
-            {
-                prevTimes[i] = HalUtil.getCurrentTime();
-                integratedData[i].value = 0.0;
-                if (doubleIntegratedData != null)
-                {
-                    doubleIntegratedData[i].value = 0.0;
-                }
-            }
+            reset(i);
         }
     }   //reset
 
@@ -202,10 +209,11 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
      * @param index specifies the index.
      * @return the last indexed input data.
      */
-    public TrcSensorData getInputData(int index)
+    public TrcSensor.SensorData getInputData(int index)
     {
         final String funcName = "getInputData";
-        TrcSensorData data = new TrcSensorData(inputData[index].timestamp, inputData[index].value);
+        TrcSensor.SensorData data =
+                new TrcSensor.SensorData(inputData[index].timestamp, inputData[index].value);
 
         if (debugEnabled)
         {
@@ -225,11 +233,11 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
      * @param index specifies the index.
      * @return last indexed integrated data.
      */
-    public TrcSensorData getIntegratedData(int index)
+    public TrcSensor.SensorData getIntegratedData(int index)
     {
         final String funcName = "getIntegratedData";
-        TrcSensorData data =
-                new TrcSensorData(integratedData[index].timestamp, integratedData[index].value);
+        TrcSensor.SensorData data = new TrcSensor.SensorData(
+                integratedData[index].timestamp, integratedData[index].value);
 
         if (debugEnabled)
         {
@@ -249,10 +257,10 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
      * @param index specifies the index.
      * @return last indexed double integrated data.
      */
-    public TrcSensorData getDoubleIntegratedData(int index)
+    public TrcSensor.SensorData getDoubleIntegratedData(int index)
     {
         final String funcName = "getDoubleIntegratedData";
-        TrcSensorData data = new TrcSensorData(
+        TrcSensor.SensorData data = new TrcSensor.SensorData(
                     doubleIntegratedData[index].timestamp, doubleIntegratedData[index].value);
 
         if (debugEnabled)
@@ -271,18 +279,22 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
     // Implements TrcTaskMgr.Task
     //
 
+    @Override
     public void startTask(TrcRobot.RunMode runMode)
     {
     }   //startTask
 
+    @Override
     public void stopTask(TrcRobot.RunMode runMode)
     {
     }   //stopTask
 
+    @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //prePeriodicTask
 
+    @Override
     public void postPeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //postPeriodicTask
@@ -292,6 +304,7 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
      *
      * @param runMode specifies the competition mode that is running.
      */
+    @Override
     public void preContinuousTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "preContinuousTask";
@@ -303,30 +316,46 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
                     "mode=%s", runMode.toString());
         }
 
+        boolean allZeroAxis = true;
+        double[] deltaTime = new double[inputData.length];
         for (int i = 0; i < inputData.length; i++)
         {
-            if (dataNames[i] != null)
+            //
+            // Get sensor data.
+            //
+            inputData[i] = sensor.getData(i, dataType);
+            deltaTime[i] = inputData[i].timestamp - prevTimes[i];
+            if ((Double)inputData[i].value != 0.0)
             {
-                //
-                // Get sensor data.
-                //
-                inputData[i] = dataProviders[i].getSensorData(dataNames[i]);
-                double deltaTime = inputData[i].timestamp - prevTimes[i];
-                //
-                // Do integration.
-                //
-                integratedData[i].timestamp = inputData[i].timestamp;
-                integratedData[i].value += inputData[i].value*deltaTime;
-                //
-                // Do double integration if necessary.
-                //
-                if (doubleIntegratedData != null)
-                {
-                    doubleIntegratedData[i].timestamp = inputData[i].timestamp;
-                    doubleIntegratedData[i].value = integratedData[i].value*deltaTime;
-                }
+                allZeroAxis = false;
+            }
+            //
+            // Do integration.
+            //
+            integratedData[i].timestamp = inputData[i].timestamp;
+            integratedData[i].value = (Double)integratedData[i].value +
+                                      (Double)inputData[i].value*deltaTime[i];
+            prevTimes[i] = inputData[i].timestamp;
+        }
 
-                prevTimes[i] = inputData[i].timestamp;
+        //
+        // Do double integration if necessary.
+        //
+        if (doubleIntegratedData != null)
+        {
+            for (int i = 0; i < inputData.length; i++)
+            {
+                doubleIntegratedData[i].timestamp = inputData[i].timestamp;
+                if (allZeroAxis)
+                {
+                    integratedData[i].value = 0.0;
+                }
+                else
+                {
+                    doubleIntegratedData[i].value =
+                            (Double)doubleIntegratedData[i].value +
+                            (Double)integratedData[i].value*deltaTime[i];
+                }
             }
         }
 
@@ -336,6 +365,7 @@ public class TrcDataIntegrator implements TrcTaskMgr.Task
         }
     }   //preContinuousTask
 
+    @Override
     public void postContinuousTask(TrcRobot.RunMode runMode)
     {
     }   //postContinuousTask

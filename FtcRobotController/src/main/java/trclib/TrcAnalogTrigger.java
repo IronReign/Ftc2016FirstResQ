@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package trclib;
 
 public class TrcAnalogTrigger implements TrcTaskMgr.Task
@@ -98,11 +121,11 @@ public class TrcAnalogTrigger implements TrcTaskMgr.Task
         if (enabled)
         {
             TrcTaskMgr.getInstance().registerTask(
-                    instanceName, this, TrcTaskMgr.TaskType.PREPERIODIC_TASK);
+                    instanceName, this, TrcTaskMgr.TaskType.PRECONTINUOUS_TASK);
         }
         else
         {
-            TrcTaskMgr.getInstance().unregisterTask(this, TrcTaskMgr.TaskType.PREPERIODIC_TASK);
+            TrcTaskMgr.getInstance().unregisterTask(this, TrcTaskMgr.TaskType.PRECONTINUOUS_TASK);
         }
     }   //setEnabled
 
@@ -123,8 +146,18 @@ public class TrcAnalogTrigger implements TrcTaskMgr.Task
     @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
-        final String funcName = "prePeriodic";
-        double value = analogInput.getData().value;
+    }   //prePeriodicTask
+
+    @Override
+    public void postPeriodicTask(TrcRobot.RunMode runMode)
+    {
+    }   //postPeriodicTask
+
+    @Override
+    public void preContinuousTask(TrcRobot.RunMode runMode)
+    {
+        final String funcName = "preContinuousTask";
+        double value = (Double)analogInput.getData().value;
 
         Zone zone;
         if (value <= lowThreshold)
@@ -158,16 +191,6 @@ public class TrcAnalogTrigger implements TrcTaskMgr.Task
                         instanceName, zone.toString(), value);
             }
         }
-    }   //prePeriodicTask
-
-    @Override
-    public void postPeriodicTask(TrcRobot.RunMode runMode)
-    {
-    }   //postPeriodicTask
-
-    @Override
-    public void preContinuousTask(TrcRobot.RunMode runMode)
-    {
     }   //preContinuousTask
 
     @Override

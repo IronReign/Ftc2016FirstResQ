@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package ftclib;
 
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -42,10 +65,7 @@ public class FtcGamepad implements TrcTaskMgr.Task
          * @param btnMask specifies the button ID that generates the event
          * @param pressed specifies true if the button is pressed, false otherwise.
          */
-        public void gamepadButtonEvent(
-                FtcGamepad gamepad,
-                final int btnMask,
-                final boolean pressed);
+        public void gamepadButtonEvent(FtcGamepad gamepad, int btnMask, boolean pressed);
     }   //interface ButonHandler
 
     private static final String moduleName = "FtcGamepad";
@@ -102,18 +122,44 @@ public class FtcGamepad implements TrcTaskMgr.Task
      *
      * @param instanceName specifies the instance name.
      * @param gamepad specifies the gamepad associated with this instance.
+     */
+    public FtcGamepad(final String instanceName, Gamepad gamepad)
+    {
+        this(instanceName, gamepad, null);
+    }   //FtcGamepad
+
+    /**
+     * Constructor: Create an instance of the object.
+     *
+     * @param instanceName specifies the instance name.
+     * @param gamepad specifies the gamepad associated with this instance.
+     * @param deadbandThreshold specifies the deadband of the gamepad analog sticks.
      * @param buttonHandler specifies the object that will handle the button events.
      *                      If none provided, it is set to null.
+     */
+    public FtcGamepad(
+            final String instanceName,
+            Gamepad gamepad,
+            final double deadbandThreshold,
+            ButtonHandler buttonHandler)
+    {
+        this(instanceName, gamepad, buttonHandler);
+        gamepad.setJoystickDeadzone((float)deadbandThreshold);
+    }   //FtcGamepad
+
+    /**
+     * Constructor: Create an instance of the object.
+     *
+     * @param instanceName specifies the instance name.
+     * @param gamepad specifies the gamepad associated with this instance.
      * @param deadbandThreshold specifies the deadband of the gamepad analog sticks.
      */
     public FtcGamepad(
             final String instanceName,
             Gamepad gamepad,
-            ButtonHandler buttonHandler,
             final double deadbandThreshold)
     {
-        this(instanceName, gamepad, buttonHandler);
-        gamepad.setJoystickDeadzone((float) deadbandThreshold);
+        this(instanceName, gamepad, deadbandThreshold, null);
     }   //FtcGamepad
 
     /**
@@ -635,10 +681,13 @@ public class FtcGamepad implements TrcTaskMgr.Task
     //
     // Implements TrcTaskMgr.Task
     //
+
+    @Override
     public void startTask(TrcRobot.RunMode runMode)
     {
     }   //startTask
 
+    @Override
     public void stopTask(TrcRobot.RunMode runMode)
     {
     }   //stopTask
@@ -649,6 +698,7 @@ public class FtcGamepad implements TrcTaskMgr.Task
      *
      * @param runMode specifies the current robot run mode.
      */
+    @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "prePeriodic";
@@ -713,14 +763,17 @@ public class FtcGamepad implements TrcTaskMgr.Task
         }
     }   //prePeriodicTask
 
+    @Override
     public void postPeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //postPeriodicTask
 
+    @Override
     public void preContinuousTask(TrcRobot.RunMode runMode)
     {
     }   //preContinuousTask
 
+    @Override
     public void postContinuousTask(TrcRobot.RunMode runMode)
     {
     }   //postContinuousTask

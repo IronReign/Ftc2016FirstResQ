@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package trclib;
 
 import hallib.HalRobotDrive;
@@ -25,14 +48,6 @@ public class TrcDriveBase extends HalRobotDrive implements TrcTaskMgr.Task
     private double xSpeed;
     private double ySpeed;
     private double turnSpeed;
-
-    public TrcDriveBase(
-            TrcMotorController leftMotor,
-            TrcMotorController rightMotor,
-            TrcGyro gyro)
-    {
-        this(null, leftMotor, null, rightMotor, gyro);
-    }   //TrcDriveBase
 
     public TrcDriveBase(
             TrcMotorController leftFrontMotor,
@@ -75,7 +90,29 @@ public class TrcDriveBase extends HalRobotDrive implements TrcTaskMgr.Task
         taskMgr.registerTask(
                 moduleName,
                 this,
-                TrcTaskMgr.TaskType.PREPERIODIC_TASK);
+                TrcTaskMgr.TaskType.PRECONTINUOUS_TASK);
+    }   //TrcDriveBase
+
+    public TrcDriveBase(
+            TrcMotorController leftFrontMotor,
+            TrcMotorController leftRearMotor,
+            TrcMotorController rightFrontMotor,
+            TrcMotorController rightRearMotor)
+    {
+        this(leftFrontMotor, leftRearMotor, rightFrontMotor, rightRearMotor, null);
+    }   //TrcDriveBase
+
+    public TrcDriveBase(
+            TrcMotorController leftMotor,
+            TrcMotorController rightMotor,
+            TrcGyro gyro)
+    {
+        this(null, leftMotor, null, rightMotor, gyro);
+    }   //TrcDriveBase
+
+    public TrcDriveBase(TrcMotorController leftMotor, TrcMotorController rightMotor)
+    {
+        this(null, leftMotor, null, rightMotor, null);
     }   //TrcDriveBase
 
     public void resetPosition()
@@ -357,6 +394,8 @@ public class TrcDriveBase extends HalRobotDrive implements TrcTaskMgr.Task
     //
     // Implements TrcTaskMgr.Task
     //
+
+    @Override
     public void startTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "startTask";
@@ -379,6 +418,7 @@ public class TrcDriveBase extends HalRobotDrive implements TrcTaskMgr.Task
         }
     }   //startTask
 
+    @Override
     public void stopTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "stopTask";
@@ -401,9 +441,20 @@ public class TrcDriveBase extends HalRobotDrive implements TrcTaskMgr.Task
         }
     }   //stopTask
 
+    @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
-        final String funcName = "prePeriodicTask";
+    }   //prePeriodicTask
+
+    @Override
+    public void postPeriodicTask(TrcRobot.RunMode runMode)
+    {
+    }   //postPeriodicTask
+
+    @Override
+    public void preContinuousTask(TrcRobot.RunMode runMode)
+    {
+        final String funcName = "preContinuousTask";
 
         if (debugEnabled)
         {
@@ -521,24 +572,17 @@ public class TrcDriveBase extends HalRobotDrive implements TrcTaskMgr.Task
 
         if (gyro != null)
         {
-            heading = gyro.getZHeading().value;
-            turnSpeed = gyro.getZRotationRate().value;
+            heading = (Double)gyro.getZHeading().value;
+            turnSpeed = (Double)gyro.getZRotationRate().value;
         }
 
         if (debugEnabled)
         {
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.TASK);
         }
-    }   //prePeriodicTask
-
-    public void postPeriodicTask(TrcRobot.RunMode runMode)
-    {
-    }   //postPeriodicTask
-
-    public void preContinuousTask(TrcRobot.RunMode runMode)
-    {
     }   //preContinuousTask
 
+    @Override
     public void postContinuousTask(TrcRobot.RunMode runMode)
     {
     }   //postContinuousTask

@@ -21,22 +21,27 @@ public class RobotInfo
     public static final double TURN_SETTLING                    = 0.2;
 
     public static final double BEACON_DISTANCE                  = 2.0;
-    public static final double LINE_THRESHOLD                   = ((10.0 + 60.0)/2.0);
-    public static final double LINEFOLLOW_KP                    = 0.02;
+    public static final double LIGHT_DARK_LEVEL                 = 20.0;
+    public static final double LIGHT_BLUE_LEVEL                 = 30.0;
+    public static final double LIGHT_RED_LEVEL                  = 100.0;
+    public static final double LIGHT_WHITE_LEVEL                = 130.0;
+    public static final double LIGHT_THRESHOLD                  = ((LIGHT_DARK_LEVEL + LIGHT_WHITE_LEVEL)/2.0);
+    public static final double LIGHT_DEADBAND                   = (LIGHT_THRESHOLD*0.25);
+    public static final double LIGHT_TRIGGER_LEVEL              = (LIGHT_WHITE_LEVEL*0.75);
+    public static final double LINEFOLLOW_KP                    = 0.01;
     public static final double LINEFOLLOW_KI                    = 0.0;
     public static final double LINEFOLLOW_KD                    = 0.0;
     public static final double LINEFOLLOW_KF                    = 0.0;
     public static final double LINEFOLLOW_TOLERANCE             = 2.0;
     public static final double LINEFOLLOW_SETTLING              = 0.2;
 
-    public static final double SONAR_KP                         = 0.25;
+    public static final double SONAR_KP                         = 0.1;
     public static final double SONAR_KI                         = 0.0;
     public static final double SONAR_KD                         = 0.0;
     public static final double SONAR_KF                         = 0.0;
     public static final double SONAR_TOLERANCE                  = 0.2;
     public static final double SONAR_SETTLING                   = 0.2;
     public static final double SONAR_INCHES_PER_CM              = (1.0/2.54);
-    public static final double SONAR_SCALE_TO_INCHES            = (512.0/(5.0/1024));
     //
     // Elevator subsystem.
     //
@@ -70,10 +75,8 @@ public class RobotInfo
     //
     // ButtonPusher subsystem.
     //
-    public static final double PUSHER_EXTEND_LEFT               = 1.0;
-    public static final double PUSHER_RETRACT_LEFT              = 0.0;
-    public static final double PUSHER_EXTEND_RIGHT              = 1.0;
-    public static final double PUSHER_RETRACT_RIGHT             = 0.0;
+    public static final double PUSHER_EXTEND_TIME               = 1.00;
+    public static final double PUSHER_RETRACT_TIME              = 1.00;
 
     //
     // ClimberRelease subsystem.
@@ -86,7 +89,10 @@ public class RobotInfo
     //
     // HangingHook subsystem.
     //
-    public static final double HANGINGHOOK_RETRACT_POSITION     = 0.11;
-    public static final double HANGINGHOOK_EXTEND_POSITION      = 0.8;
+    public static final double HANGINGHOOK_RETRACT_POSITION     = 0.22;
+    public static final double HANGINGHOOK_EXTEND_POSITION      = 0.85;
+    public static final double HANGINGHOOK_DEPOSIT_CLIMBER      = 0.60;
+    public static final double HANGINGHOOK_STEPRATE             = 0.2;
+    public static final double HANGINGHOOK_HOLD_TIME            = 2.0;
 
 }   //class RobotInfo

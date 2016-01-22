@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package trclib;
 
 import hallib.HalUtil;
@@ -683,12 +706,12 @@ public class TrcPidMotor implements TrcTaskMgr.Task
         if (active)
         {
             taskMgr.registerTask(instanceName, this, TrcTaskMgr.TaskType.STOP_TASK);
-            taskMgr.registerTask(instanceName, this, TrcTaskMgr.TaskType.POSTPERIODIC_TASK);
+            taskMgr.registerTask(instanceName, this, TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK);
         }
         else
         {
             taskMgr.unregisterTask(this, TrcTaskMgr.TaskType.STOP_TASK);
-            taskMgr.unregisterTask(this, TrcTaskMgr.TaskType.POSTPERIODIC_TASK);
+            taskMgr.unregisterTask(this, TrcTaskMgr.TaskType.POSTCONTINUOUS_TASK);
         }
         this.active = active;
 
@@ -701,6 +724,8 @@ public class TrcPidMotor implements TrcTaskMgr.Task
     //
     // Implements TrcTaskMgr.Task
     //
+
+    @Override
     public void startTask(TrcRobot.RunMode runMode)
     {
     }   //startTask
@@ -711,6 +736,7 @@ public class TrcPidMotor implements TrcTaskMgr.Task
      *
      * @param runMode specifies the competition mode that is about to
      */
+    @Override
     public void stopTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "stopTask";
@@ -730,6 +756,7 @@ public class TrcPidMotor implements TrcTaskMgr.Task
         }
     }   //stopTask
 
+    @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //prePeriodicTask
@@ -745,7 +772,18 @@ public class TrcPidMotor implements TrcTaskMgr.Task
      *
      * @param runMode specifies the competition mode that is running.
      */
+    @Override
     public void postPeriodicTask(TrcRobot.RunMode runMode)
+    {
+    }   //postPeriodicTask
+
+    @Override
+    public void preContinuousTask(TrcRobot.RunMode runMode)
+    {
+    }   //preContinuousTask
+
+    @Override
+    public void postContinuousTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "postPeriodic";
 
@@ -819,14 +857,6 @@ public class TrcPidMotor implements TrcTaskMgr.Task
         {
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.TASK);
         }
-    }   //postPeriodicTask
-
-    public void preContinuousTask(TrcRobot.RunMode runMode)
-    {
-    }   //preContinuousTask
-
-    public void postContinuousTask(TrcRobot.RunMode runMode)
-    {
     }   //postContinuousTask
 
 }   //class TrcPidMotor

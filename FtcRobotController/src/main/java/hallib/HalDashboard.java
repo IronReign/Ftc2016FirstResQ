@@ -1,10 +1,32 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package hallib;
 
 import com.qualcomm.robotcore.robocol.Telemetry;
 
 import java.util.NoSuchElementException;
 
-import ftclib.FtcOpMode;
 import trclib.TrcDbgTrace;
 
 /**
@@ -17,8 +39,6 @@ import trclib.TrcDbgTrace;
  * dashboard display is very useful for displaying debug information. In
  * particular, the TrcMenu class uses the dashboard to display a choice menu
  * and interact with the user for choosing autonomous strategies and options.
- * This class is a wrapper of the Telemetry class to send information to the
- * Driver Station to be displayed.
  */
 public class HalDashboard
 {
@@ -28,7 +48,7 @@ public class HalDashboard
 
     public static final int MAX_NUM_TEXTLINES = 16;
 
-    private static final String displayKeyFormat = "[%02d]";
+    private static final String displayKeyFormat = "%02d";
     private static Telemetry telemetry = null;
     private static HalDashboard instance = null;
     private static String[] display = new String[MAX_NUM_TEXTLINES];
@@ -36,11 +56,9 @@ public class HalDashboard
     /**
      * Constructor: Creates an instance of the object.
      * There should only be one global instance of this object.
-     * Only the FtcOpMode object should construct an instance of
-     * this object and nobody else. However, we are not enforcing
-     * this because there is no way for this constructor to know
-     * whether the constructor call was initiated by loading a
-     * new opMode or from the robot code somewhere.
+     * Typically, only the FtcOpMode object should construct an
+     * instance of this object via getInstance(telemetry) and
+     * nobody else.
      *
      * @param telemetry specifies the Telemetry object.
      */
@@ -62,18 +80,26 @@ public class HalDashboard
     }   //HalDashboard
 
     /**
-     * Constructor: Creates an instance of the object.
-     * There should only be one global instance of this object.
-     * Only the FtcOpMode object should construct an instance of
-     * this object and nobody else. However, we are not enforcing
-     * this because there is no way for this constructor to know
-     * whether the constructor call was initiated by loading a
-     * new opMode or from the robot code somewhere.
+     * This static method allows the caller to get an instance of
+     * the dashboard so that it can display information on its
+     * display. If no instance found, it will create one. Typically,
+     * this is called by FtcOpMode to create one global instance
+     * of HalDashboard.
+     *
+     * @param telemetry specifies the Telemetry object.
+     * @return global instance of the dashboard object.
      */
-    private HalDashboard()
+    /*
+    public static HalDashboard getInstance(Telemetry telemetry)
     {
-        this(FtcOpMode.getInstance().telemetry);
-    }    //HalDashboard
+        if (instance == null)
+        {
+            instance = new HalDashboard(telemetry);
+        }
+
+        return instance;
+    }   //getInstance
+    */
 
     /**
      * This static method allows any class to get an instance of
@@ -84,11 +110,6 @@ public class HalDashboard
      */
     public static HalDashboard getInstance()
     {
-        if (instance == null)
-        {
-            instance = new HalDashboard();
-        }
-
         return instance;
     }   //getInstance
 

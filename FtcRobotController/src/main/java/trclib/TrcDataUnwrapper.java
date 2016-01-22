@@ -1,4 +1,29 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package trclib;
+
+import ftclib.FtcOpMode;
 
 /**
  * This class unwraps data for sensors that have one or more axes. Some value
@@ -24,25 +49,22 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
     private TrcDbgTrace dbgTrace = null;
 
     private final String instanceName;
-    private TrcSensorData.DataProvider[] dataProviders = null;
-    private String[] dataNames = null;
-    private double[] valueRangeLows = null;
-    private double[] valueRangeHighs = null;
-    private TrcSensorData[] prevData = null;
-    private int[] numCrossovers = null;
+    private TrcSensor sensor;
+    private Object dataType;
+    private int numAxes;
+    private double[] valueRangeLows;
+    private double[] valueRangeHighs;
+    private TrcSensor.SensorData[] prevData;
+    private int[] numCrossovers;
 
     /**
      * Constructor: Creates an instance of the object.
      *
      * @param instanceName specifies the instance name.
-     * @param dataProviders specifies an array of data provider objects.
-     * @param dataNames specifies an array of data names to be used to identify the data when
-     *                  calling the data provider.
+     * @param sensor specifies the sensor object that needs data unwrapping.
+     * @param dataType specifies the data type to be unwrapped.
      */
-    public TrcDataUnwrapper(
-            final String instanceName,
-            TrcSensorData.DataProvider[] dataProviders,
-            String[] dataNames)
+    public TrcDataUnwrapper(final String instanceName, TrcSensor sensor, Object dataType)
     {
         if (debugEnabled)
         {
@@ -53,36 +75,23 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
                     TrcDbgTrace.MsgLevel.INFO);
         }
 
-        if (dataProviders == null || dataNames == null)
+        if (sensor == null)
         {
-            throw new NullPointerException("dataProviders/dataNames cannot be null.");
-        }
-        else if (dataProviders.length <= 0)
-        {
-            throw new IllegalArgumentException(
-                    "dataProviders array must have at least one element.");
-        }
-        else if (dataProviders.length != dataNames.length)
-        {
-            throw new IllegalArgumentException(
-                    "dataProviders/dataNames arrays must have same number of elements.");
+            throw new NullPointerException("sensor cannot be null.");
         }
 
         this.instanceName = instanceName;
-        this.dataProviders = dataProviders;
-        this.dataNames = dataNames;
+        this.sensor = sensor;
+        this.dataType = dataType;
+        numAxes = sensor.getNumAxes();
 
-        valueRangeLows = new double[dataProviders.length];
-        valueRangeHighs = new double[dataProviders.length];
-        prevData = new TrcSensorData[dataProviders.length];
-        numCrossovers = new int[dataProviders.length];
+        valueRangeLows = new double[numAxes];
+        valueRangeHighs = new double[numAxes];
+        prevData = new TrcSensor.SensorData[numAxes];
+        numCrossovers = new int[numAxes];
 
-        for (int i = 0; i < dataProviders.length; i++)
+        for (int i = 0; i < numAxes; i++)
         {
-            if (dataProviders[i] == null)
-            {
-                throw new NullPointerException("Elements in dataProviders cannot be null.");
-            }
             valueRangeLows[i] = 0.0;
             valueRangeHighs[i] = 0.0;
             prevData[i] = null;
@@ -133,7 +142,7 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
     /**
      * This method resets the indexed unwrapper.
      *
-     * @param index specifies the index.
+     * @param index specifies the axis index.
      */
     public void reset(int index)
     {
@@ -145,7 +154,7 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
-        prevData[index] = dataProviders[index].getSensorData(dataNames[index]);
+        prevData[index] = sensor.getData(index, dataType);
         numCrossovers[index] = 0;
     }   //reset
 
@@ -162,20 +171,16 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
-        for (int i = 0; i < dataProviders.length; i++)
+        for (int i = 0; i < numAxes; i++)
         {
-            if (dataNames[i] != null)
-            {
-                prevData[i] = dataProviders[i].getSensorData(dataNames[i]);
-                numCrossovers[i] = 0;
-            }
+            reset(i);
         }
     }   //reset
 
     /**
      * This method sets the value range of the indexed unwrapper.
      *
-     * @param index specifes the index.
+     * @param index specifes the axis index.
      * @param valueRangeLow specifies the low value of the range.
      * @param valueRangeHigh specifies the high value of the range.
      */
@@ -203,16 +208,17 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
     /**
      * This method returns the indexed unwrapped data.
      *
-     * @param index specifies the index.
+     * @param index specifies the axis index.
      * @return unwrapped data.
      */
-    public TrcSensorData getUnwrappedData(int index)
+    public TrcSensor.SensorData getUnwrappedData(int index)
     {
         final String funcName = "getUnwrappedData";
-        TrcSensorData data = dataProviders[index].getSensorData(dataNames[index]);
+        TrcSensor.SensorData data =
+                new TrcSensor.SensorData(prevData[index].timestamp, prevData[index].value);
 
         data.value = (valueRangeHighs[index] - valueRangeLows[index])*numCrossovers[index] +
-                     (data.value - valueRangeLows[index]);
+                     ((Double)data.value - valueRangeLows[index]);
 
         if (debugEnabled)
         {
@@ -228,18 +234,22 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
     // Implements TrcTaskMgr.Task
     //
 
+    @Override
     public void startTask(TrcRobot.RunMode runMode)
     {
     }   //startTask
 
+    @Override
     public void stopTask(TrcRobot.RunMode runMode)
     {
     }   //stopTask
 
+    @Override
     public void prePeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //prePeriodicTask
 
+    @Override
     public void postPeriodicTask(TrcRobot.RunMode runMode)
     {
     }   //postPeriodicTask
@@ -249,6 +259,7 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
      *
      * @param runMode specifies the competition mode that is running.
      */
+    @Override
     public void preContinuousTask(TrcRobot.RunMode runMode)
     {
         final String funcName = "preContinuousTask";
@@ -260,26 +271,22 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
                     "mode=%s", runMode.toString());
         }
 
-        for (int i = 0; i < dataProviders.length; i++)
+        for (int i = 0; i < numAxes; i++)
         {
-            if (dataNames[i] != null)
+            TrcSensor.SensorData data = sensor.getData(i, dataType);
+            if (Math.abs((Double)data.value - (Double)prevData[i].value) >
+                (valueRangeHighs[i] - valueRangeLows[i])/2.0)
             {
-                TrcSensorData currData = dataProviders[i].getSensorData(dataNames[i]);
-                if (Math.abs(currData.value - prevData[i].value) >
-                    (valueRangeHighs[i] - valueRangeLows[i])/2.0)
+                if ((Double)data.value > (Double)prevData[i].value)
                 {
-                    if (currData.value > prevData[i].value)
-                    {
-                        numCrossovers[i]--;
-                    }
-                    else
-                    {
-                        numCrossovers[i]++;
-                    }
+                    numCrossovers[i]--;
                 }
-
-                prevData[i] = currData;
+                else
+                {
+                    numCrossovers[i]++;
+                }
             }
+            prevData[i] = data;
         }
 
         if (debugEnabled)
@@ -289,6 +296,7 @@ public class TrcDataUnwrapper implements TrcTaskMgr.Task
         }
     }   //preContinuousTask
 
+    @Override
     public void postContinuousTask(TrcRobot.RunMode runMode)
     {
     }   //postContinuousTask

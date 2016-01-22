@@ -1,3 +1,26 @@
+/*
+ * Titan Robotics Framework Library
+ * Copyright (c) 2015 Titan Robotics Club (http://www.titanrobotics.net)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package trclib;
 
 /**
@@ -8,70 +31,42 @@ package trclib;
  * The platform dependent sensor class must implement the abstract methods
  * required by this class. The abstract methods allow this class to get raw
  * data from the sensor.
- * Depending on the options specified in the constructor, this class creates a
- * calibrator, a data processor and an integrator. If it needs data integration,
- * it can set the INTEGRATE or the DOUBLE_INTEGRATE options. If it supports its
- * own calibration, it can override the calibrate() and isCalibrating() methods
- * to call its own. Otherwise, it can set the DO_CALIBRATION option to enable
- * the built-in calibrator.
+ * Depending on the options specified in the constructor, this class may create
+ * an integrator. If it needs data integration, it can set the INTEGRATE or the
+ * DOUBLE_INTEGRATE options.
  */
-public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
+public abstract class TrcAnalogInput extends TrcSensor
 {
-    /**
-     * This abstract method returns the raw data from the sensor.
-     *
-     * @return raw data.
-     */
-    public abstract TrcSensorData getRawData();
+    //
+    // AnalogInput data type.
+    //
+    public enum DataType
+    {
+        INPUT_DATA,
+        INTEGRATED_DATA,
+        DOUBLE_INTEGRATED_DATA
+    }   //enum DataType
 
     /**
-     * This abstract method returns the raw integrated data from the sensor
-     * if the sensor supports it. Otherwise, it may return zero or throw
-     * an UnsupportedOperationException.
+     * This abstract method returns the raw data with the specified type.
      *
-     * @return raw integrated data.
+     * @param dataType specifies the data type.
+     * @return raw data with the specified type.
      */
-    public abstract TrcSensorData getRawIntegratedData();
-
-    /**
-     * This abstract method returns the raw double integrated data from
-     * the sensor if the sensor supports it. Otherwise, it may return zero
-     * or throw an UnsupportedOperationException.
-     *
-     * @return raw double integrated data.
-     */
-    public abstract TrcSensorData getRawDoubleIntegratedData();
+    public abstract SensorData getRawData(DataType dataType);
 
     //
     // AnalogInput options.
     //
     public static final int ANALOGINPUT_INTEGRATE       = (1 << 0);
     public static final int ANALOGINPUT_DOUBLE_INTEGRATE= (1 << 1);
-    public static final int ANALOGINPUT_DO_CALIBRATION  = (1 << 2);
-
-    //
-    // Data names that the data provider must provide data for.
-    //
-    private static final String DATANAME_RAW_DATA       = "rawData";
-    private static final String DATANAME_PROCESSED_DATA = "processedData";
-
-    //
-    // Built-in calibrator parameters.
-    //
-    private static final int NUM_CAL_SAMPLES            = 100;
-    private static final long CAL_INTERVAL              = 10;   //in msec.
 
     private static final String moduleName = "TrcAnalogInput";
     private static final boolean debugEnabled = false;
     private TrcDbgTrace dbgTrace = null;
 
     private final String instanceName;
-    private int options;
-    private TrcDataProcessor dataProcessor = null;
     private TrcDataIntegrator dataIntegrator = null;
-    private TrcDataCalibrator calibrator = null;
-    private double zeroOffsets[] = {0.0};
-    private double deadbands[] = {0.0};
 
     /**
      * Constructor: Creates an instance of the object.
@@ -80,11 +75,12 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
      * @param options specifies the AnalogInput options. Multiple options can be OR'd together.
      *                ANALOGINPUT_INTEGRATE - do integration on sensor data.
      *                ANALOGINPUT_DOUBLE_INTEGRATE - do double integration on sensor data.
-     *                ANALOGINPUT_DO_CALIBRATION - do calibration on the sensor.
      * @param filter specifies a filter object, null if none.
      */
-    public TrcAnalogInput(final String instanceName, final int options, TrcFilter filter)
+    public TrcAnalogInput(final String instanceName, int options, TrcFilter filter)
     {
+        super(instanceName, 1, new TrcFilter[] {filter});
+
         if (debugEnabled)
         {
             dbgTrace = new TrcDbgTrace(moduleName + "." + instanceName,
@@ -94,24 +90,6 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
         }
 
         this.instanceName = instanceName;
-        this.options = options;
-
-        //
-        // Create the filter array of one element.
-        // Even if no filter is used, we will put a null in it.
-        //
-        TrcFilter filters[] = {filter};
-
-        //
-        // Create the data provider array of one element and
-        // set it to this class as the data provider.
-        //
-        TrcSensorData.DataProvider dataProviders[] = {this};
-
-        //
-        // Create the data processor with the given filter array.
-        //
-        dataProcessor = new TrcDataProcessor(instanceName, filters);
 
         //
         // Create the data integrator. Data integrator needs data providers to
@@ -119,21 +97,9 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
         //
         if ((options & ANALOGINPUT_INTEGRATE) != 0)
         {
-            String dataNames[] = {DATANAME_PROCESSED_DATA};
-            dataIntegrator = new TrcDataIntegrator(instanceName,
-                                                   dataProviders,
-                                                   dataNames,
-                                                   (options & ANALOGINPUT_DOUBLE_INTEGRATE) != 0);
-        }
-
-        //
-        // Create the data calibrator. Data calibrator needs data providers to
-        // provide raw rate data for each axis.
-        //
-        if ((options & ANALOGINPUT_DO_CALIBRATION) != 0)
-        {
-            String dataNames[] = {DATANAME_RAW_DATA};
-            calibrator = new TrcDataCalibrator(instanceName, dataProviders, dataNames);
+            dataIntegrator = new TrcDataIntegrator(
+                    instanceName, this, DataType.INPUT_DATA,
+                    (options & ANALOGINPUT_DOUBLE_INTEGRATE) != 0);
         }
     }   //TrcAnalogInput
 
@@ -144,9 +110,8 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
      * @param options specifies the AnalogInput options. Multiple options can be OR'd together.
      *                ANALOGINPUT_INTEGRATE - do integration on sensor data.
      *                ANALOGINPUT_DOUBLE_INTEGRATE - do double integration on sensor data.
-     *                ANALOGINPUT_DO_CALIBRATION - do calibration on the sensor.
      */
-    public TrcAnalogInput(final String instanceName, final int options)
+    public TrcAnalogInput(final String instanceName, int options)
     {
         this(instanceName, options, null);
     }   //TrcAnalogInput
@@ -184,7 +149,7 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
      *
      * @param enabled specifies true if enabling, false otherwise.
      */
-    protected void setEnabled(boolean enabled)
+    public void setEnabled(boolean enabled)
     {
         final String funcName = "setEnabled";
 
@@ -193,11 +158,6 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
             dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
                                 "enabled=%s", Boolean.toString(enabled));
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
-        }
-
-        if (enabled)
-        {
-            calibrate();
         }
 
         //
@@ -226,7 +186,7 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
-        dataProcessor.setInverted(0, inverted);
+        setInverted(0, inverted);
     }   //setInverted
 
     /**
@@ -244,42 +204,18 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
             dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
         }
 
-        dataProcessor.setScale(0, scale);
+        setScale(0, scale);
     }   //setScale
-
-    /**
-     * This method calls the built-in calibrator to calibrates the gyro.
-     *
-     * @param numCalSamples specifies the number of calibration samples to take.
-     * @param calInterval specifies the interval in msec between samples.
-     */
-    public void calibrate(int numCalSamples, long calInterval)
-    {
-        final String funcName = "calibrate";
-
-        if (calibrator != null)
-        {
-            calibrator.calibrate(numCalSamples, calInterval, zeroOffsets, deadbands);
-            dataProcessor.setCalibrationData(0, zeroOffsets[0], deadbands[0]);
-        }
-
-        if (debugEnabled)
-        {
-            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API,
-                                "numSamples=%d,calInterval=%d", numCalSamples, calInterval);
-            dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API);
-        }
-    }   //calibrate
 
     /**
      * This method returns the processed sensor data.
      *
-     * @return sensor data.
+     * @return processed data.
      */
-    public TrcSensorData getData()
+    public TrcSensor.SensorData getData()
     {
         final String funcName = "getData";
-        TrcSensorData data = getSensorData(DATANAME_PROCESSED_DATA);
+        TrcSensor.SensorData data = getData(0, DataType.INPUT_DATA);;
 
         if (debugEnabled)
         {
@@ -296,14 +232,18 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
      *
      * @return integrated sensor data.
      */
-    public TrcSensorData getIntegratedData()
+    public TrcSensor.SensorData getIntegratedData()
     {
         final String funcName = "getIntegratedData";
-        TrcSensorData data = null;
+        TrcSensor.SensorData data = null;
 
         if (dataIntegrator != null)
         {
             data = dataIntegrator.getIntegratedData(0);
+        }
+        else
+        {
+            data = getRawData(DataType.DOUBLE_INTEGRATED_DATA);
         }
 
         if (debugEnabled)
@@ -321,14 +261,18 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
      *
      * @return double integrated sensor data.
      */
-    public TrcSensorData getDoubleIntegratedData()
+    public TrcSensor.SensorData getDoubleIntegratedData()
     {
         final String funcName = "getDoubleIntegratedData";
-        TrcSensorData data = null;
+        TrcSensor.SensorData data = null;
 
         if (dataIntegrator != null)
         {
             data = dataIntegrator.getDoubleIntegratedData(0);
+        }
+        else
+        {
+            data = getRawData(DataType.DOUBLE_INTEGRATED_DATA);
         }
 
         if (debugEnabled)
@@ -344,38 +288,6 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
     //
     // The following methods can be overridden by a platform dependent AnalogInput class.
     //
-
-    /**
-     * This method calls the built-in calibrator to calibrates the gyro.
-     * This method can be overridden by the platform dependent gyro to
-     * provide its own calibration.
-     */
-    public void calibrate()
-    {
-        calibrate(NUM_CAL_SAMPLES, CAL_INTERVAL);
-    }   //calibrate
-
-    /**
-     * This method always returns false because the built-in calibrator is synchronous.
-     *
-     * @return false.
-     */
-    public boolean isCalibrating()
-    {
-        final String funcName = "isCalibrating";
-
-        if (debugEnabled)
-        {
-            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API);
-            dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API, "=false");
-        }
-
-        //
-        // The built-in calibrator is synchronous, so we always return false.
-        //
-
-        return false;
-    }   //isCalibrating
 
     /**
      * This method resets the integrator.
@@ -397,40 +309,35 @@ public abstract class TrcAnalogInput implements TrcSensorData.DataProvider
     }   //resetIntegrator
 
     //
-    // Implements TrcSensorData.DataProvider interface.
+    // Implements TrcSensor abstract methods.
     //
 
     /**
-     * This method returns the sensor data idnetified by the given dataName. The
-     * possible data returned can be raw sensor data and  processed sensor data.
+     * This abstract method returns the raw sensor data for the specified axis and type.
      *
-     * @param dataName specifies the data names to identify what sensor data to get.
-     * @return sensor data.
+     * @param index specifies the axis index.
+     * @param dataType specifies the data type.
+     * @return raw data for the specified axis.
      */
     @Override
-    public TrcSensorData getSensorData(String dataName)
+    public SensorData getRawData(int index, Object dataType)
     {
-        final String funcName = "getSensorData";
-        TrcSensorData data = null;
+        final String funcName = "getRawData";
+        SensorData data = null;
 
-        if (dataName.equals(DATANAME_RAW_DATA))
+        if (index == 0)
         {
-            data = getRawData();
-        }
-        else if (dataName.equals(DATANAME_PROCESSED_DATA))
-        {
-            data = getRawData();
-            data.value = dataProcessor.processData(0, data.value);
+            data = getRawData((DataType)dataType);
         }
 
         if (debugEnabled)
         {
-            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.API);
-            dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.API,
-                               "=(timestamp=%.3f,value=%f)", data.timestamp, data.value);
+            dbgTrace.traceEnter(funcName, TrcDbgTrace.TraceLevel.CALLBK, "index=%d", index);
+            dbgTrace.traceExit(funcName, TrcDbgTrace.TraceLevel.CALLBK,
+                               "=(timestamp=%.3f,value=%f", data.timestamp, data.value);
         }
 
         return data;
-    }   //getSensorData
+    }   //getRawData
 
 }   //class TrcAnalogInput
